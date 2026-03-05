@@ -1,0 +1,37 @@
+/* 编辑器区域 */
+.editor-area {
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-primary);
+  transition: background var(--transition-normal);
+}
+
+/* 空状态 */
+.editor-area-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  transition: background var(--transition-normal);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-tertiary);
+  animation: fadeIn var(--transition-normal) ease-out;
+}
+
+.empty-state h2 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-md);
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: color var(--transition-normal);
+}
+
+.empty-state p {
+  font-size: var(--font-size-md);
+  color: var(--text-tertiary);
+  transition: color var(--transition-normal);
+}

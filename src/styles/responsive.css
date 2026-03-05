@@ -1,0 +1,257 @@
+/* 响应式设计系统 */
+
+/* ==================== 断点定义 ==================== */
+/*
+  断点参考（移动优先）：
+  - Mobile: < 640px
+  - Tablet: 640px - 768px
+  - Desktop: 768px - 1024px
+  - Large: 1024px - 1280px
+  - Extra Large: > 1280px
+*/
+
+/* ==================== 响应式容器 ==================== */
+
+/* 应用容器 */
+.app {
+  min-width: 320px;
+}
+
+/* ==================== 工具栏响应式 ==================== */
+
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 0 12px;
+  }
+
+  .toolbar-title {
+    font-size: 13px;
+  }
+
+  .toolbar-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar-title {
+    display: none;
+  }
+
+  .toolbar-button {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
+
+/* ==================== 侧边栏响应式 ==================== */
+
+.sidebar {
+  transition: width var(--transition-normal);
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 180px;
+  }
+
+  .sidebar-header {
+    font-size: 12px;
+    padding: 0 12px;
+  }
+
+  .tree-node-content {
+    height: 28px;
+  }
+
+  .tree-name {
+    font-size: 12px;
+  }
+}
+
+/* 手机模式 - 侧边栏可折叠 */
+@media (max-width: 640px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 50px; /* 工具栏高度 */
+    height: calc(100vh - 50px);
+    z-index: 1000;
+    width: 250px;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* 添加遮罩层 */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
+
+  .sidebar.open + .sidebar-overlay {
+    display: block;
+  }
+}
+
+/* ==================== 标签页响应式 ==================== */
+
+@media (max-width: 768px) {
+  .tabs {
+    overflow-x: auto;
+  }
+
+  .tab {
+    min-width: 80px;
+    max-width: 120px;
+    padding: 0 8px;
+  }
+
+  .tab-name {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .tab {
+    min-width: 70px;
+    max-width: 100px;
+  }
+
+  .tab-name {
+    font-size: 11px;
+  }
+}
+
+/* ==================== 编辑器响应式 ==================== */
+
+/* 编辑器在小屏幕上需要更好的体验 */
+@media (max-width: 768px) {
+  .editor-area-empty {
+    padding: 20px;
+  }
+
+  .empty-state h2 {
+    font-size: 20px;
+  }
+
+  .empty-state p {
+    font-size: 13px;
+  }
+}
+
+/* ==================== Toast 响应式 ==================== */
+
+@media (max-width: 768px) {
+  .toast-container {
+    top: 50px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+
+  .toast {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 640px) {
+  .toast-message {
+    font-size: 12px;
+  }
+}
+
+/* ==================== 按钮响应式 ==================== */
+
+@media (max-width: 768px) {
+  .toolbar-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar-button {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  /* 隐藏次要按钮文本，只显示图标 */
+  .toolbar-button-text {
+    display: none;
+  }
+}
+
+/* ==================== 字体大小响应式 ==================== */
+
+@media (max-width: 768px) {
+  :root {
+    --font-size-xs: 11px;
+    --font-size-sm: 12px;
+    --font-size-md: 13px;
+    --font-size-lg: 14px;
+    --font-size-xl: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --font-size-xs: 10px;
+    --font-size-sm: 11px;
+    --font-size-md: 12px;
+    --font-size-lg: 13px;
+    --font-size-xl: 14px;
+  }
+}
+
+/* ==================== 间距响应式 ==================== */
+
+@media (max-width: 768px) {
+  :root {
+    --spacing-xs: 3px;
+    --spacing-sm: 6px;
+    --spacing-md: 10px;
+    --spacing-lg: 12px;
+    --spacing-xl: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --spacing-xs: 2px;
+    --spacing-sm: 4px;
+    --spacing-md: 8px;
+    --spacing-lg: 10px;
+    --spacing-xl: 12px;
+  }
+}
+
+/* ==================== 打印样式 ==================== */
+
+@media print {
+  .toolbar,
+  .sidebar,
+  .tabs {
+    display: none;
+  }
+
+  .editor-container {
+    width: 100%;
+  }
+}

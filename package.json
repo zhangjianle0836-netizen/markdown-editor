@@ -1,0 +1,108 @@
+{
+  "name": "md-editor",
+  "version": "1.0.0",
+  "description": "A lightweight, modern Markdown editor with live preview",
+  "main": "dist-electron/main.js",
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/yourusername/md-editor#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/md-editor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/md-editor/issues"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.electron.json && vite build",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "npm run build && electron-builder",
+    "preview": "vite preview",
+    "lint": "echo 'No linting configured yet'"
+  },
+  "keywords": [
+    "markdown",
+    "editor",
+    "electron",
+    "react",
+    "live-preview",
+    "gfm"
+  ],
+  "dependencies": {
+    "@uiw/react-md-editor": "^4.0.4",
+    "dompurify": "^3.3.1",
+    "electron-store": "^8.0.2",
+    "file-saver": "^2.0.5",
+    "html2pdf.js": "^0.10.1",
+    "lodash-es": "^4.17.23",
+    "marked": "^17.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5",
+    "@types/file-saver": "^2.0.7",
+    "@types/lodash-es": "^4.17.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "terser": "^5.46.0",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.4",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.mdeditor.app",
+    "productName": "MD Editor",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "fileAssociations": [
+      {
+        "ext": "md",
+        "name": "Markdown",
+        "description": "Markdown Document",
+        "role": "Editor"
+      },
+      {
+        "ext": "markdown",
+        "name": "Markdown",
+        "description": "Markdown Document",
+        "role": "Editor"
+      },
+      {
+        "ext": "mdown",
+        "name": "Markdown",
+        "description": "Markdown Document",
+        "role": "Editor"
+      },
+      {
+        "ext": "mkd",
+        "name": "Markdown",
+        "description": "Markdown Document",
+        "role": "Editor"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development",
+      "mimeTypes": ["text/markdown", "text/x-markdown"]
+    }
+  }
+}

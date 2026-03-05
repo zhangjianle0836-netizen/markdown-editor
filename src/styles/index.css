@@ -1,0 +1,55 @@
+/* 基础样式 */
+@import './variables.css';
+@import './themes.css';
+@import './animations.css';
+@import './responsive.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  transition: background var(--transition-normal), color var(--transition-normal);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* 选中文本样式 */
+::selection {
+  background: rgba(24, 144, 255, 0.3); /* 使用半透明蓝色，提高可读性 */
+  color: inherit; /* 保持原始文字颜色 */
+}
+
+/* 暗色主题下的选中样式 */
+[data-theme="dark"] ::selection {
+  background: rgba(24, 144, 255, 0.4); /* 暗色主题下稍微提高透明度 */
+}
