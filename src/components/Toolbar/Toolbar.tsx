@@ -83,17 +83,17 @@ export function Toolbar({
     <div className={`toolbar ${isMac ? 'toolbar-macos' : ''}`}>
       <div className="toolbar-left">
         <button onClick={handleNewFile} className="toolbar-button">
-          New
+          新建
         </button>
         <button onClick={handleOpenFile} className="toolbar-button">
-          Open
+          打开
         </button>
         <button
           onClick={handleSaveFile}
           className="toolbar-button"
           disabled={!activeTab || !activeTab.isModified}
         >
-          Save
+          保存
         </button>
       </div>
       <div className="toolbar-title">MD Editor</div>

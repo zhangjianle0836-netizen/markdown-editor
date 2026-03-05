@@ -107,7 +107,7 @@ export function EditorArea({ tab, onContentChange, viewMode, onNewFile, onOpenFi
         preview={getPreviewMode()}
         enableScroll={true}
         visibleDragbar={false}
-        hideToolbar={viewMode === 'preview'} // 查看视图隐藏工具栏
+        hideToolbar={true} // 始终隐藏编辑器工具栏，使用自定义 Toolbar
       />
     </div>
   );
