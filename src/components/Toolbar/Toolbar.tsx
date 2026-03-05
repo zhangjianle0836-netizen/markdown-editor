@@ -103,23 +103,23 @@ export function Toolbar({
           <button
             onClick={() => onViewModeChange('preview')}
             className={`toolbar-button ${viewMode === 'preview' ? 'active' : ''}`}
-            title="查看视图"
+            title="仅显示预览效果"
           >
-            查看
+            预览
           </button>
           <button
             onClick={() => onViewModeChange('edit')}
             className={`toolbar-button ${viewMode === 'edit' ? 'active' : ''}`}
-            title="编辑视图"
+            title="仅显示编辑器"
           >
             编辑
           </button>
           <button
             onClick={() => onViewModeChange('live')}
             className={`toolbar-button ${viewMode === 'live' ? 'active' : ''}`}
-            title="全部视图"
+            title="左侧编辑，右侧实时预览"
           >
-            全部
+            分屏
           </button>
         </div>
       </div>
