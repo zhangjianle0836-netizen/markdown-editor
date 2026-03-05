@@ -10,8 +10,12 @@ import { getFileName } from './utils/path';
 import { checkCanCloseTab } from './utils/dialog';
 import './App.css';
 
+// 视图模式类型
+export type ViewMode = 'preview' | 'edit' | 'live';
+
 export default function App() {
   const [currentFile, setCurrentFile] = useState<Tab | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('preview'); // 默认查看视图
   const { toasts, showToast, removeToast } = useToast();
 
   // 处理从系统打开文件
@@ -166,9 +170,15 @@ export default function App() {
         onFileOpen={(file) => setCurrentFile(file)}
         onTabSave={handleSave}
         showToast={showToast}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
       <div className="main-container">
-        <EditorArea tab={currentFile} onContentChange={handleContentChange} />
+        <EditorArea
+          tab={currentFile}
+          onContentChange={handleContentChange}
+          viewMode={viewMode}
+        />
       </div>
       <Toast toasts={toasts} onRemove={removeToast} />
     </div>

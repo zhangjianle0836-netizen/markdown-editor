@@ -1,4 +1,5 @@
 import { Tab } from '../../types/electron';
+import { ViewMode } from '../../App';
 import { generateId } from '../../utils/id';
 import './Toolbar.css';
 
@@ -7,6 +8,8 @@ interface ToolbarProps {
   onFileOpen: (tab: Tab) => void;
   onTabSave: (tabId: string) => void;
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
 }
 
 export function Toolbar({
@@ -14,6 +17,8 @@ export function Toolbar({
   onFileOpen,
   onTabSave,
   showToast,
+  viewMode,
+  onViewModeChange,
 }: ToolbarProps) {
   const handleNewFile = () => {
     const newTab: Tab = {
@@ -92,7 +97,32 @@ export function Toolbar({
         </button>
       </div>
       <div className="toolbar-title">MD Editor</div>
-      <div className="toolbar-right">{/* 可扩展功能按钮 */}</div>
+      <div className="toolbar-right">
+        {/* 视图切换按钮 */}
+        <div className="view-mode-buttons">
+          <button
+            onClick={() => onViewModeChange('preview')}
+            className={`toolbar-button ${viewMode === 'preview' ? 'active' : ''}`}
+            title="查看视图"
+          >
+            查看
+          </button>
+          <button
+            onClick={() => onViewModeChange('edit')}
+            className={`toolbar-button ${viewMode === 'edit' ? 'active' : ''}`}
+            title="编辑视图"
+          >
+            编辑
+          </button>
+          <button
+            onClick={() => onViewModeChange('live')}
+            className={`toolbar-button ${viewMode === 'live' ? 'active' : ''}`}
+            title="全部视图"
+          >
+            全部
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

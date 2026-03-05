@@ -81,3 +81,38 @@
   border-color: var(--color-primary-active);
 }
 
+/* 视图模式切换按钮组 */
+.view-mode-buttons {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.view-mode-buttons .toolbar-button {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.view-mode-buttons .toolbar-button:not(:last-child) {
+  border-right: 1px solid var(--border-primary);
+}
+
+.view-mode-buttons .toolbar-button:hover:not(:disabled) {
+  transform: none;
+}
+
+/* 视图按钮激活状态 */
+.view-mode-buttons .toolbar-button.active {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-weight: 600;
+}
+
+.view-mode-buttons .toolbar-button.active:hover {
+  background: var(--color-primary-hover);
+}

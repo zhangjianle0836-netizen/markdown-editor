@@ -2,20 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { debounce } from 'lodash-es';
 import MarkdownEditor from '@uiw/react-md-editor';
 import { Tab } from '../../types/electron';
+import { ViewMode } from '../../App';
 import './EditorArea.css';
 
 interface EditorAreaProps {
   tab?: Tab;
-  onContentChange: (tabId: string, content: string) => void;
+  onContentChange: (content: string) => void;
+  viewMode: ViewMode;
 }
 
-export function EditorArea({ tab, onContentChange }: EditorAreaProps) {
+export function EditorArea({ tab, onContentChange, viewMode }: EditorAreaProps) {
   const [content, setContent] = useState('');
 
   // 使用 ref 存储防抖函数
   const debouncedOnChangeRef = useRef(
-    debounce((tabId: string, newContent: string) => {
-      onContentChange(tabId, newContent);
+    debounce((newContent: string) => {
+      onContentChange(newContent);
     }, 300)
   );
 
@@ -24,8 +26,8 @@ export function EditorArea({ tab, onContentChange }: EditorAreaProps) {
     const debounced = debouncedOnChangeRef.current;
     debounced.cancel(); // 先取消之前的
 
-    debouncedOnChangeRef.current = debounce((tabId: string, newContent: string) => {
-      onContentChange(tabId, newContent);
+    debouncedOnChangeRef.current = debounce((newContent: string) => {
+      onContentChange(newContent);
     }, 300);
 
     return () => {
@@ -52,9 +54,7 @@ export function EditorArea({ tab, onContentChange }: EditorAreaProps) {
   const handleChange = (value: string | undefined) => {
     const newContent = value || '';
     setContent(newContent);
-    if (tab) {
-      debouncedOnChangeRef.current(tab.id, newContent);
-    }
+    debouncedOnChangeRef.current(newContent);
   };
 
   if (!tab) {
@@ -68,15 +68,33 @@ export function EditorArea({ tab, onContentChange }: EditorAreaProps) {
     );
   }
 
+  // 根据 viewMode 设置预览模式
+  // 'preview' -> 只显示预览，隐藏工具栏
+  // 'edit' -> 只显示编辑器
+  // 'live' -> 显示编辑器和预览
+  const getPreviewMode = () => {
+    switch (viewMode) {
+      case 'preview':
+        return 'preview';
+      case 'edit':
+        return 'edit';
+      case 'live':
+        return 'live';
+      default:
+        return 'preview';
+    }
+  };
+
   return (
     <div className="editor-area">
       <MarkdownEditor
         value={content}
         onChange={handleChange}
         height="100%"
-        preview="live"
+        preview={getPreviewMode()}
         enableScroll={true}
         visibleDragbar={false}
+        hideToolbar={viewMode === 'preview'} // 查看视图隐藏工具栏
       />
     </div>
   );
