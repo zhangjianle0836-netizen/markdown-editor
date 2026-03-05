@@ -1,6 +1,7 @@
 import { Tab } from '../../types/electron';
 import { ViewMode } from '../../App';
 import { generateId } from '../../utils/id';
+import { HelpPanel } from '../HelpPanel/HelpPanel';
 import './Toolbar.css';
 
 interface ToolbarProps {
@@ -122,6 +123,8 @@ export function Toolbar({
             分屏
           </button>
         </div>
+        {/* 帮助按钮 */}
+        <HelpPanel />
       </div>
     </div>
   );
