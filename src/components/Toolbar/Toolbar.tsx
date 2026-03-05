@@ -25,7 +25,7 @@ export function Toolbar({
     const newTab: Tab = {
       id: generateId(),
       path: '',
-      name: 'Untitled',
+      name: '未命名',
       content: '',
       isModified: false,
     };
@@ -36,7 +36,7 @@ export function Toolbar({
     // 检查是否在 Electron 环境中
     if (!window.electronAPI) {
       showToast(
-        'File operations are only available in the Electron app. Please use "npm run electron:dev" to run in Electron mode.',
+        '文件操作仅在 Electron 应用中可用，请使用 "npm run electron:dev" 运行',
         'info'
       );
       return;
@@ -61,13 +61,13 @@ export function Toolbar({
           };
           onFileOpen(newTab, false); // 打开已有文件
         } else {
-          showToast(`Failed to open file: ${fileResult.error}`, 'error');
+          showToast(`打开文件失败：${fileResult.error}`, 'error');
         }
       }
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      showToast(`Failed to open file: ${errorMessage}`, 'error');
+        error instanceof Error ? error.message : '未知错误';
+      showToast(`打开文件失败：${errorMessage}`, 'error');
     }
   };
 

@@ -75,9 +75,9 @@ export default function App() {
         );
         if (result.success) {
           setCurrentFile({ ...currentFile, isModified: false });
-          showToast('File saved successfully', 'success');
+          showToast('文件保存成功', 'success');
         } else {
-          showToast(`Failed to save: ${result.error}`, 'error');
+          showToast(`保存失败：${result.error}`, 'error');
         }
       } else {
         // 如果没有路径，提示保存对话框
@@ -95,16 +95,16 @@ export default function App() {
               name: fileName,
               isModified: false,
             });
-            showToast('File saved successfully', 'success');
+            showToast('文件保存成功', 'success');
           } else {
-            showToast(`Failed to save: ${result.error}`, 'error');
+            showToast(`保存失败：${result.error}`, 'error');
           }
         }
       }
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      showToast(`Failed to save: ${errorMessage}`, 'error');
+        error instanceof Error ? error.message : '未知错误';
+      showToast(`保存失败：${errorMessage}`, 'error');
     }
   }, [currentFile, showToast]);
 
@@ -121,7 +121,7 @@ export default function App() {
     handleFileOpen({
       id: generateId(),
       path: '',
-      name: 'Untitled',
+      name: '未命名',
       content: '',
       isModified: false,
     }, true); // 新建文件，使用编辑视图
@@ -153,13 +153,13 @@ export default function App() {
             isModified: false,
           }, false); // 打开已有文件，使用查看视图
         } else {
-          showToast(`Failed to open file: ${fileResult.error}`, 'error');
+          showToast(`打开文件失败：${fileResult.error}`, 'error');
         }
       }
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      showToast(`Failed to open file: ${errorMessage}`, 'error');
+        error instanceof Error ? error.message : '未知错误';
+      showToast(`打开文件失败：${errorMessage}`, 'error');
     }
   }, [currentFile, showToast, handleFileOpen]);
 
