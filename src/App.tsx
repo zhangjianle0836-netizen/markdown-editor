@@ -18,6 +18,13 @@ export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('preview'); // 默认查看视图
   const { toasts, showToast, removeToast } = useToast();
 
+  // 打开文件后自动设置视图模式
+  const handleFileOpen = useCallback((file: Tab, isNewFile: boolean = false) => {
+    setCurrentFile(file);
+    // 新建文件默认编辑视图，打开文件默认查看视图
+    setViewMode(isNewFile ? 'edit' : 'preview');
+  }, []);
+
   // 处理从系统打开文件
   const openFileFromSystem = useCallback(async (data: { path: string; name: string; content: string }) => {
     // 检查当前文件是否有未保存的更改
@@ -29,14 +36,14 @@ export default function App() {
       if (!canClose) return;
     }
 
-    setCurrentFile({
+    handleFileOpen({
       id: generateId(),
       path: data.path,
       name: data.name,
       content: data.content,
       isModified: false,
-    });
-  }, [currentFile]);
+    }, false); // 打开已有文件，使用查看视图
+  }, [currentFile, handleFileOpen]);
 
   // 监听从系统打开文件的事件
   useEffect(() => {
@@ -111,14 +118,14 @@ export default function App() {
       if (!canClose) return;
     }
 
-    setCurrentFile({
+    handleFileOpen({
       id: generateId(),
       path: '',
       name: 'Untitled',
       content: '',
       isModified: false,
-    });
-  }, [currentFile]);
+    }, true); // 新建文件，使用编辑视图
+  }, [currentFile, handleFileOpen]);
 
   const handleOpenFile = useCallback(async () => {
     // 检查当前文件是否有未保存的更改
@@ -138,13 +145,13 @@ export default function App() {
 
         const fileResult = await window.electronAPI.readFile(filePath);
         if (fileResult.success && fileResult.content) {
-          setCurrentFile({
+          handleFileOpen({
             id: generateId(),
             path: filePath,
             name: fileName,
             content: fileResult.content,
             isModified: false,
-          });
+          }, false); // 打开已有文件，使用查看视图
         } else {
           showToast(`Failed to open file: ${fileResult.error}`, 'error');
         }
@@ -154,7 +161,7 @@ export default function App() {
         error instanceof Error ? error.message : 'Unknown error';
       showToast(`Failed to open file: ${errorMessage}`, 'error');
     }
-  }, [currentFile, showToast]);
+  }, [currentFile, showToast, handleFileOpen]);
 
   // 键盘快捷键
   useKeyboardShortcuts({
@@ -167,7 +174,7 @@ export default function App() {
     <div className="app">
       <Toolbar
         activeTab={currentFile}
-        onFileOpen={(file) => setCurrentFile(file)}
+        onFileOpen={handleFileOpen}
         onTabSave={handleSave}
         showToast={showToast}
         viewMode={viewMode}
@@ -178,6 +185,8 @@ export default function App() {
           tab={currentFile}
           onContentChange={handleContentChange}
           viewMode={viewMode}
+          onNewFile={handleNewFile}
+          onOpenFile={handleOpenFile}
         />
       </div>
       <Toast toasts={toasts} onRemove={removeToast} />

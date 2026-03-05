@@ -9,9 +9,11 @@ interface EditorAreaProps {
   tab?: Tab;
   onContentChange: (content: string) => void;
   viewMode: ViewMode;
+  onNewFile?: () => void;
+  onOpenFile?: () => void;
 }
 
-export function EditorArea({ tab, onContentChange, viewMode }: EditorAreaProps) {
+export function EditorArea({ tab, onContentChange, viewMode, onNewFile, onOpenFile }: EditorAreaProps) {
   const [content, setContent] = useState('');
 
   // 使用 ref 存储防抖函数
@@ -61,8 +63,19 @@ export function EditorArea({ tab, onContentChange, viewMode }: EditorAreaProps) 
     return (
       <div className="editor-area-empty">
         <div className="empty-state">
-          <h2>No File Open</h2>
-          <p>Create a new file or open an existing one to get started</p>
+          <div className="welcome-icon">📝</div>
+          <h2>欢迎使用 MD Editor</h2>
+          <p>开始创建或打开一个 Markdown 文档</p>
+          <div className="welcome-actions">
+            <button className="welcome-button primary" onClick={onNewFile}>
+              <span className="button-icon">📄</span>
+              <span>新建文件</span>
+            </button>
+            <button className="welcome-button" onClick={onOpenFile}>
+              <span className="button-icon">📂</span>
+              <span>打开文件</span>
+            </button>
+          </div>
         </div>
       </div>
     );

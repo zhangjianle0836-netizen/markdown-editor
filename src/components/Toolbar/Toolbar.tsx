@@ -5,7 +5,7 @@ import './Toolbar.css';
 
 interface ToolbarProps {
   activeTab?: Tab;
-  onFileOpen: (tab: Tab) => void;
+  onFileOpen: (tab: Tab, isNewFile?: boolean) => void;
   onTabSave: (tabId: string) => void;
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
   viewMode: ViewMode;
@@ -28,7 +28,7 @@ export function Toolbar({
       content: '',
       isModified: false,
     };
-    onFileOpen(newTab);
+    onFileOpen(newTab, true); // 新建文件
   };
 
   const handleOpenFile = async () => {
@@ -58,7 +58,7 @@ export function Toolbar({
             content: fileResult.content,
             isModified: false,
           };
-          onFileOpen(newTab);
+          onFileOpen(newTab, false); // 打开已有文件
         } else {
           showToast(`Failed to open file: ${fileResult.error}`, 'error');
         }
