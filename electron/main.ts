@@ -34,52 +34,39 @@ function createWindow() {
   // 开发模式下加载本地服务器
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:3000');
+    mainWindow.webContents.openDevTools();
+    console.log('[Main] Development mode - DevTools opened');
   } else {
-    // 生产环境也打开开发者工具（用于调试白屏问题）
+    // 生产环境加载打包文件
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
-    console.log('[Main] Loading file from:', path.join(__dirname, '../dist/index.html'));
+    console.log('[Main] Production mode - Loading from:', path.join(__dirname, '../dist/index.html'));
   }
 
-  // ✅ 始终打开开发者工具（包括生产环境，用于调试）
-  mainWindow.webContents.openDevTools();
-  console.log('[Main] DevTools opened');
-
   // 优化：窗口准备好后再显示，避免白屏
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
   });
 
-  // 优化：窗口准备好后再显示，避免白屏
-  mainWindow.once('ready-to-show', () => {
-    console.log('[Main] Window is ready to show');
-    mainWindow?.show();
-  });
+  // 监听加载事件（仅开发环境记录详细日志）
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.on('did-start-loading', () => {
+      console.log('[Main] Web contents started loading');
+    });
 
-  // 监听加载事件
-  mainWindow.webContents.on('did-start-loading', () => {
-    console.log('[Main] Web contents started loading');
-  });
+    mainWindow.webContents.on('did-finish-load', () => {
+      console.log('[Main] Web contents finished loading');
+    });
 
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('[Main] Web contents finished loading');
-  });
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error('[Main] Failed to load:', errorCode, errorDescription);
+    });
 
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    console.error('[Main] Failed to load:', errorCode, errorDescription);
-  });
-
-  // 捕获渲染进程错误
-  mainWindow.webContents.on('render-process-gone', (event, details) => {
-    console.error('[Main] Render process gone:', details);
-  });
-
-  // 捕获控制台消息
-  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-    console.log('[Renderer]', message);
-  });
+    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      console.log('[Renderer]', message);
+    });
+  }
 
   mainWindow.on('closed', () => {
-    console.log('[Main] Window closed');
     mainWindow = null;
   });
 
