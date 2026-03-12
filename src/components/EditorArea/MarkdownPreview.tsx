@@ -18,6 +18,12 @@ interface HeadingItem {
   text: string;
 }
 
+interface SearchMatch {
+  index: number;
+  label: string;
+  level: number | null;
+}
+
 let converter: MarkdownConverter | null = null;
 let converterLoadingPromise: Promise<MarkdownConverter> | null = null;
 
@@ -208,10 +214,15 @@ const buildEnhancedHtml = (rawHtml: string, headings: HeadingItem[]): string => 
 
 function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
   const deferredContent = useDeferredValue(content);
+  const containerRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLElement | null>(null);
   const [html, setHtml] = useState('<p></p>');
   const [headings, setHeadings] = useState<HeadingItem[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+  const [matches, setMatches] = useState<SearchMatch[]>([]);
+  const [readingProgress, setReadingProgress] = useState(0);
 
   useEffect(() => {
     let isActive = true;
@@ -276,8 +287,238 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
     return () => observer.disconnect();
   }, [html]);
 
+  useEffect(() => {
+    const articleNode = articleRef.current;
+    const containerNode = containerRef.current;
+    if (!articleNode || !containerNode) {
+      return;
+    }
+
+    const rawTerm = searchTerm.trim();
+    const escapedTerm = rawTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const markerNodes = articleNode.querySelectorAll('mark[data-preview-search]');
+    markerNodes.forEach((markerNode) => {
+      const parentNode = markerNode.parentNode;
+      if (!parentNode) {
+        return;
+      }
+
+      parentNode.replaceChild(
+        document.createTextNode(markerNode.textContent || ''),
+        markerNode
+      );
+      parentNode.normalize();
+    });
+
+    if (!rawTerm) {
+      setMatches([]);
+      setActiveMatchIndex(0);
+      return;
+    }
+
+    const walker = document.createTreeWalker(articleNode, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        if (!node.textContent?.trim()) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        const parentElement = node.parentElement;
+        if (!parentElement) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        if (parentElement.closest('pre, code, .markdown-preview-toc')) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    const regex = new RegExp(escapedTerm, 'gi');
+    const nextMatches: SearchMatch[] = [];
+    let matchCounter = 0;
+
+    while (walker.nextNode()) {
+      const textNode = walker.currentNode as Text;
+      const originalText = textNode.textContent || '';
+      let lastIndex = 0;
+      let matched = false;
+      const fragment = document.createDocumentFragment();
+      let result = regex.exec(originalText);
+
+      while (result) {
+        matched = true;
+        const matchedText = result[0];
+        const beforeText = originalText.slice(lastIndex, result.index);
+        if (beforeText) {
+          fragment.appendChild(document.createTextNode(beforeText));
+        }
+
+        const markNode = document.createElement('mark');
+        markNode.dataset.previewSearch = 'true';
+        markNode.dataset.matchIndex = String(matchCounter);
+        markNode.textContent = matchedText;
+        fragment.appendChild(markNode);
+
+        const ownerHeading = textNode.parentElement?.closest<HTMLElement>('h1, h2, h3, h4, h5, h6');
+        nextMatches.push({
+          index: matchCounter,
+          label: ownerHeading?.textContent?.replace('#', '').trim() || matchedText,
+          level: ownerHeading ? Number(ownerHeading.tagName.slice(1)) : null,
+        });
+
+        matchCounter += 1;
+        lastIndex = result.index + matchedText.length;
+        result = regex.exec(originalText);
+      }
+
+      if (!matched) {
+        regex.lastIndex = 0;
+        continue;
+      }
+
+      const afterText = originalText.slice(lastIndex);
+      if (afterText) {
+        fragment.appendChild(document.createTextNode(afterText));
+      }
+
+      textNode.parentNode?.replaceChild(fragment, textNode);
+      regex.lastIndex = 0;
+    }
+
+    setMatches(nextMatches);
+    setActiveMatchIndex(0);
+
+    if (nextMatches.length > 0) {
+      requestAnimationFrame(() => {
+        const firstMatch = articleNode.querySelector<HTMLElement>('mark[data-match-index="0"]');
+        firstMatch?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+    }
+  }, [html, searchTerm]);
+
+  useEffect(() => {
+    const articleNode = articleRef.current;
+    if (!articleNode || matches.length === 0) {
+      return;
+    }
+
+    const matchNodes = Array.from(
+      articleNode.querySelectorAll<HTMLElement>('mark[data-preview-search]')
+    );
+
+    matchNodes.forEach((matchNode) => {
+      matchNode.classList.toggle(
+        'active',
+        Number(matchNode.dataset.matchIndex) === activeMatchIndex
+      );
+    });
+
+    const activeMatchNode = articleNode.querySelector<HTMLElement>(
+      `mark[data-match-index="${activeMatchIndex}"]`
+    );
+    activeMatchNode?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [activeMatchIndex, matches]);
+
+  useEffect(() => {
+    const containerNode = containerRef.current;
+    const articleNode = articleRef.current;
+    if (!containerNode || !articleNode) {
+      return;
+    }
+
+    const updateProgress = () => {
+      const totalScrollable = containerNode.scrollHeight - containerNode.clientHeight;
+      if (totalScrollable <= 0) {
+        setReadingProgress(0);
+        return;
+      }
+
+      const nextProgress = Math.min(
+        100,
+        Math.max(0, (containerNode.scrollTop / totalScrollable) * 100)
+      );
+      setReadingProgress(nextProgress);
+    };
+
+    updateProgress();
+    containerNode.addEventListener('scroll', updateProgress, { passive: true });
+
+    return () => {
+      containerNode.removeEventListener('scroll', updateProgress);
+    };
+  }, [html]);
+
+  const hasSearchResults = matches.length > 0;
+
+  const handleSearchMove = (direction: 'prev' | 'next') => {
+    if (!hasSearchResults) {
+      return;
+    }
+
+    setActiveMatchIndex((prev) => {
+      if (direction === 'next') {
+        return (prev + 1) % matches.length;
+      }
+
+      return (prev - 1 + matches.length) % matches.length;
+    });
+  };
+
   return (
-    <section className="markdown-preview" aria-label="Markdown preview">
+    <section
+      ref={containerRef}
+      className="markdown-preview"
+      aria-label="Markdown preview"
+    >
+      <header className="markdown-preview-tools">
+        <div className="markdown-preview-progress-track" aria-hidden="true">
+          <span
+            className="markdown-preview-progress-bar"
+            style={{ width: `${readingProgress}%` }}
+          />
+        </div>
+        <div className="markdown-preview-tools-row">
+          <div className="markdown-preview-tools-copy">
+            <span className="markdown-preview-tools-eyebrow">Reader mode</span>
+            <strong>{Math.round(readingProgress)}% 已阅读</strong>
+          </div>
+          <div className="markdown-preview-search">
+            <input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="markdown-preview-search-input"
+              type="text"
+              placeholder="搜索正文内容"
+              aria-label="搜索正文内容"
+            />
+            <span className="markdown-preview-search-status">
+              {searchTerm.trim()
+                ? hasSearchResults
+                  ? `${activeMatchIndex + 1}/${matches.length}`
+                  : '0 结果'
+                : '输入后高亮正文'}
+            </span>
+            <button
+              type="button"
+              className="markdown-preview-search-button"
+              onClick={() => handleSearchMove('prev')}
+              disabled={!hasSearchResults}
+            >
+              上一个
+            </button>
+            <button
+              type="button"
+              className="markdown-preview-search-button"
+              onClick={() => handleSearchMove('next')}
+              disabled={!hasSearchResults}
+            >
+              下一个
+            </button>
+          </div>
+        </div>
+      </header>
       {headings.length >= 3 && (
         <aside className="markdown-preview-toc" aria-label="文档目录">
           <div className="markdown-preview-toc-card">
@@ -297,6 +538,26 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
                 </a>
               ))}
             </nav>
+            {searchTerm.trim() && matches.length > 0 && (
+              <div className="markdown-preview-search-outline">
+                <span className="markdown-preview-search-outline-title">搜索命中</span>
+                <div className="markdown-preview-search-outline-list">
+                  {matches.slice(0, 6).map((match) => (
+                    <button
+                      key={match.index}
+                      type="button"
+                      className={`markdown-preview-search-outline-item ${
+                        activeMatchIndex === match.index ? 'active' : ''
+                      }`}
+                      data-level={match.level || 1}
+                      onClick={() => setActiveMatchIndex(match.index)}
+                    >
+                      {match.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </aside>
       )}
