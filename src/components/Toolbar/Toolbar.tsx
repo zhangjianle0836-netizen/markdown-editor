@@ -79,11 +79,15 @@ export function Toolbar({
 
   // 检测是否为 macOS
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  const documentName = activeTab?.name || 'Preview-first workspace';
+  const documentMeta = activeTab
+    ? activeTab.isModified ? '未保存更改' : '已保存'
+    : '打开一个 Markdown 文档开始阅读或创作';
 
   return (
     <div className={`toolbar ${isMac ? 'toolbar-macos' : ''}`}>
       <div className="toolbar-left">
-        <button onClick={handleNewFile} className="toolbar-button">
+        <button onClick={handleNewFile} className="toolbar-button toolbar-button-primary">
           新建
         </button>
         <button onClick={handleOpenFile} className="toolbar-button">
@@ -97,7 +101,11 @@ export function Toolbar({
           保存
         </button>
       </div>
-      <div className="toolbar-title">MD Editor</div>
+      <div className="toolbar-title">
+        <span className="toolbar-title-eyebrow">Markdown Atelier</span>
+        <strong className="toolbar-title-main">{documentName}</strong>
+        <span className="toolbar-title-meta">{documentMeta}</span>
+      </div>
       <div className="toolbar-right">
         {/* 视图切换按钮 */}
         <div className="view-mode-buttons">

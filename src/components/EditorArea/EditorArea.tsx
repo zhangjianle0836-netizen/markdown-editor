@@ -71,9 +71,15 @@ function EditorAreaComponent({
     return (
       <div className="editor-area-empty">
         <div className="empty-state">
+          <div className="welcome-badge">Preview-first Markdown Studio</div>
           <div className="welcome-icon">📝</div>
           <h2>欢迎使用 MD Editor</h2>
-          <p>开始创建或打开一个 Markdown 文档</p>
+          <p>为长文阅读、说明文档和实时预览而设计的轻量工作区</p>
+          <div className="welcome-highlights">
+            <span>即时预览</span>
+            <span>专注排版</span>
+            <span>本地文件</span>
+          </div>
           <div className="welcome-actions">
             <button className="welcome-button primary" onClick={onNewFile}>
               <span className="button-icon">📄</span>

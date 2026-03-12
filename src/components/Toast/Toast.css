@@ -16,8 +16,10 @@
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--bg-primary);
-  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(19, 34, 56, 0.08);
+  border-radius: 18px;
+  backdrop-filter: blur(18px);
   box-shadow: var(--shadow-lg);
   animation: slideInRight var(--transition-normal) ease-out;
   border-left: 4px solid;

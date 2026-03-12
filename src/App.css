@@ -3,9 +3,36 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  background: transparent;
   color: var(--text-primary);
   transition: background var(--transition-normal), color var(--transition-normal);
+}
+
+.app::before,
+.app::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(8px);
+}
+
+.app::before {
+  width: 520px;
+  height: 520px;
+  top: -160px;
+  right: -120px;
+  background: radial-gradient(circle, rgba(255, 122, 89, 0.18) 0%, rgba(255, 122, 89, 0) 68%);
+}
+
+.app::after {
+  width: 420px;
+  height: 420px;
+  left: -140px;
+  bottom: -140px;
+  background: radial-gradient(circle, rgba(24, 144, 255, 0.14) 0%, rgba(24, 144, 255, 0) 70%);
 }
 
 /* 主内容区域 */
@@ -13,6 +40,13 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
+  margin: 0 var(--app-shell-gap) var(--app-shell-gap);
+  border: 1px solid var(--border-primary);
+  border-radius: 28px;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-xl), var(--shadow-glow);
+  backdrop-filter: blur(20px);
 }
 
 /* 编辑器容器 */
@@ -35,31 +69,18 @@
 /* 编辑器加载状态 */
 .editor-loading {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--border-color);
-  border-top-color: var(--accent-color);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.editor-loading p {
-  margin-top: 16px;
-  font-size: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(248, 246, 241, 0.92) 100%);
   color: var(--text-secondary);
+  font-size: var(--font-size-md);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 768px) {
+  .main-container {
+    margin: 0 10px 10px;
+    border-radius: 22px;
+  }
 }

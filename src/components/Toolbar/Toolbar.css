@@ -1,12 +1,13 @@
 /* 工具栏容器 */
 .toolbar {
-  height: var(--toolbar-height);
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-primary);
+  min-height: 74px;
+  background: transparent;
+  border-bottom: 1px solid rgba(19, 34, 56, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--spacing-lg);
+  gap: var(--spacing-lg);
+  padding: 14px var(--app-shell-gap) 16px;
   -webkit-app-region: drag;
   transition: background var(--transition-normal), border-color var(--transition-normal);
 }
@@ -15,6 +16,7 @@
 .toolbar-left,
 .toolbar-right {
   display: flex;
+  align-items: center;
   gap: var(--spacing-sm);
   -webkit-app-region: no-drag;
 }
@@ -26,30 +28,62 @@
 
 /* 工具栏标题 */
 .toolbar-title {
-  font-weight: 600;
-  font-size: var(--font-size-md);
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 16px;
+  text-align: center;
   color: var(--text-primary);
-  transition: color var(--transition-normal);
+}
+
+.toolbar-title-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.toolbar-title-main {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.toolbar-title-meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 /* 工具栏按钮 */
 .toolbar-button {
-  padding: var(--spacing-sm) var(--spacing-lg);
+  min-height: 40px;
+  padding: 0 16px;
   border: 1px solid var(--border-primary);
-  background: var(--bg-primary);
-  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  border-radius: 999px;
   cursor: pointer;
   font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
   transition: all var(--transition-normal);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 22px rgba(19, 34, 56, 0.06);
 }
 
 .toolbar-button:hover:not(:disabled) {
-  background: var(--bg-hover);
-  border-color: var(--border-secondary);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(19, 144, 255, 0.24);
+  transform: translateY(-1px) scale(1.01);
   box-shadow: var(--shadow-md);
 }
 
@@ -59,26 +93,25 @@
 }
 
 .toolbar-button:disabled {
-  opacity: var(--opacity-disabled);
+  opacity: 0.48;
   cursor: not-allowed;
   transform: none;
 }
 
 /* 主要操作按钮 */
 .toolbar-button-primary {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+  border-color: transparent;
   color: var(--text-inverse);
+  box-shadow: 0 14px 32px rgba(255, 122, 89, 0.26);
 }
 
 .toolbar-button-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
+  background: linear-gradient(135deg, var(--color-primary-hover) 0%, #ff906f 100%);
 }
 
 .toolbar-button-primary:active:not(:disabled) {
-  background: var(--color-primary-active);
-  border-color: var(--color-primary-active);
+  background: linear-gradient(135deg, var(--color-primary-active) 0%, #ef6d4d 100%);
 }
 
 /* 视图模式切换按钮组 */
@@ -86,16 +119,19 @@
   display: flex;
   gap: 0;
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 24px rgba(19, 34, 56, 0.06);
 }
 
 .view-mode-buttons .toolbar-button {
   border: none;
   border-radius: 0;
+  background: transparent;
   box-shadow: none;
-  padding: var(--spacing-sm) var(--spacing-md);
+  min-width: 74px;
+  padding: 0 14px;
 }
 
 .view-mode-buttons .toolbar-button:not(:last-child) {
@@ -108,11 +144,51 @@
 
 /* 视图按钮激活状态 */
 .view-mode-buttons .toolbar-button.active {
-  background: var(--color-primary);
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.14) 0%, rgba(255, 122, 89, 0.14) 100%);
   color: var(--text-inverse);
-  font-weight: 600;
+  color: var(--color-ink);
+  font-weight: 700;
 }
 
 .view-mode-buttons .toolbar-button.active:hover {
-  background: var(--color-primary-hover);
+  background: linear-gradient(135deg, rgba(24, 144, 255, 0.18) 0%, rgba(255, 122, 89, 0.18) 100%);
+}
+
+@media (max-width: 900px) {
+  .toolbar {
+    min-height: 88px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-title {
+    order: -1;
+    flex-basis: 100%;
+    padding: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .toolbar-left {
+    gap: 6px;
+  }
+
+  .toolbar-button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .view-mode-buttons {
+    flex: 1;
+  }
 }

@@ -7,6 +7,9 @@
   --color-primary: #1890ff;
   --color-primary-hover: #40a9ff;
   --color-primary-active: #096dd9;
+  --color-accent: #ff7a59;
+  --color-accent-soft: #ffd8cb;
+  --color-ink: #132238;
 
   /* 功能色 */
   --color-success: #52c41a;
@@ -26,23 +29,26 @@
 
   /* 背景颜色 */
   --bg-primary: #ffffff;
-  --bg-secondary: #fafafa;
-  --bg-tertiary: #f5f5f5;
-  --bg-hover: #e8e8e8;
-  --bg-active: #d9d9d9;
+  --bg-secondary: #f8f6f1;
+  --bg-tertiary: #f0ece4;
+  --bg-hover: #ebe5d9;
+  --bg-active: #ddd4c2;
   --bg-elevated: #ffffff;
+  --bg-canvas: linear-gradient(180deg, #f6efe3 0%, #fcfbf8 42%, #ffffff 100%);
+  --bg-panel: rgba(255, 255, 255, 0.78);
+  --bg-panel-strong: rgba(255, 255, 255, 0.94);
 
   /* 边框颜色 */
-  --border-primary: #e8e8e8;
-  --border-secondary: #d9d9d9;
+  --border-primary: #e6ddcf;
+  --border-secondary: #d6c8b5;
   --border-focus: #40a9ff;
 
   /* 分隔线 */
-  --divider-color: #f0f0f0;
+  --divider-color: rgba(19, 34, 56, 0.08);
 
   /* 阴影颜色 */
-  --shadow-color: rgba(0, 0, 0, 0.08);
-  --shadow-color-lg: rgba(0, 0, 0, 0.12);
+  --shadow-color: rgba(28, 34, 48, 0.08);
+  --shadow-color-lg: rgba(28, 34, 48, 0.16);
 
   /* ==================== 间距系统 ==================== */
 
@@ -95,6 +101,7 @@
   --shadow-md: 0 4px 12px var(--shadow-color);
   --shadow-lg: 0 8px 24px var(--shadow-color-lg);
   --shadow-xl: 0 16px 48px var(--shadow-color-lg);
+  --shadow-glow: 0 24px 80px rgba(255, 122, 89, 0.12);
 
   /* ==================== 过渡 ==================== */
 
@@ -112,6 +119,7 @@
   /* ==================== 布局 ==================== */
 
   --toolbar-height: 50px;
+  --app-shell-gap: 18px;
   --tabs-height: 40px;
   --sidebar-width: 250px;
   --sidebar-min-width: 200px;
@@ -127,37 +135,6 @@
   --breakpoint-2xl: 1536px;
 }
 
-/* ==================== 暗色主题 ==================== */
-
-[data-theme="dark"] {
-  /* 文本颜色 */
-  --text-primary: #e8e8e8;
-  --text-secondary: #a0a0a0;
-  --text-tertiary: #6e6e6e;
-  --text-disabled: #4a4a4a;
-  --text-inverse: #1a1a1a;
-
-  /* 背景颜色 */
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #242424;
-  --bg-tertiary: #2d2d2d;
-  --bg-hover: #363636;
-  --bg-active: #404040;
-  --bg-elevated: #2d2d2d;
-
-  /* 边框颜色 */
-  --border-primary: #404040;
-  --border-secondary: #505050;
-  --border-focus: #40a9ff;
-
-  /* 分隔线 */
-  --divider-color: #303030;
-
-  /* 阴影颜色 */
-  --shadow-color: rgba(0, 0, 0, 0.45);
-  --shadow-color-lg: rgba(0, 0, 0, 0.6);
-}
-
 /* ==================== 高对比度主题 ==================== */
 
 @media (prefers-contrast: high) {
@@ -165,12 +142,6 @@
     --text-primary: #000000;
     --text-secondary: #333333;
     --border-primary: #000000;
-  }
-
-  [data-theme="dark"] {
-    --text-primary: #ffffff;
-    --text-secondary: #cccccc;
-    --border-primary: #ffffff;
   }
 }
 
