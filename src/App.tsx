@@ -59,10 +59,18 @@ export default function App() {
   }, [openFileFromSystem]);
 
   const handleContentChange = useCallback((content: string) => {
-    if (currentFile) {
-      setCurrentFile({ ...currentFile, content, isModified: true });
-    }
-  }, [currentFile]);
+    setCurrentFile((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      if (prev.content === content && prev.isModified) {
+        return prev;
+      }
+
+      return { ...prev, content, isModified: true };
+    });
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!currentFile) return;

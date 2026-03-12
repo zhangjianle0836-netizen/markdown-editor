@@ -103,3 +103,96 @@
 .button-icon {
   font-size: 20px;
 }
+
+.markdown-preview {
+  height: 100%;
+  overflow: auto;
+  background: var(--bg-primary);
+}
+
+.markdown-preview-content {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  color: var(--text-primary);
+  line-height: var(--line-height-lg);
+  word-break: break-word;
+}
+
+.markdown-preview-content h1,
+.markdown-preview-content h2,
+.markdown-preview-content h3,
+.markdown-preview-content h4,
+.markdown-preview-content h5,
+.markdown-preview-content h6 {
+  margin-top: 1.4em;
+  margin-bottom: 0.7em;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.markdown-preview-content p,
+.markdown-preview-content ul,
+.markdown-preview-content ol,
+.markdown-preview-content pre,
+.markdown-preview-content blockquote,
+.markdown-preview-content table {
+  margin: 0.8em 0;
+}
+
+.markdown-preview-content code {
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  padding: 0.1em 0.35em;
+}
+
+.markdown-preview-content pre {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  overflow: auto;
+  padding: 14px;
+}
+
+.markdown-preview-content pre code {
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-preview-content a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.markdown-preview-content a:hover {
+  text-decoration: underline;
+}
+
+.markdown-preview-content blockquote {
+  padding: 0.4em 1em;
+  border-left: 4px solid var(--border-secondary);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.markdown-preview-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.markdown-preview-content th,
+.markdown-preview-content td {
+  border: 1px solid var(--border-primary);
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.markdown-preview-content img {
+  max-width: 100%;
+  height: auto;
+}

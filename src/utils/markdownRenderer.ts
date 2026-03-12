@@ -1,55 +1,13 @@
-import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import html2pdf from 'html2pdf.js';
-import { saveAs } from 'file-saver';
+import { marked } from 'marked';
 
-/**
- * 配置 marked 选项
- * 启用 GitHub Flavored Markdown 和其他功能
- */
 marked.setOptions({
-  gfm: true,           // GitHub Flavored Markdown
-  breaks: true,        // 支持 GitHub 风格的换行
-  pedantic: false,     // 不严格遵循原始 markdown.pl
+  gfm: true,
+  breaks: true,
+  pedantic: false,
 });
 
-/**
- * 自定义渲染器
- * 增强链接和代码块的渲染
- */
-const renderer = new marked.Renderer();
-
-// 自定义链接渲染（添加安全属性）
-const originalLinkRenderer = renderer.link;
-renderer.link = (href, title, text) => {
-  // 过滤危险的协议
-  const allowedProtocols = ['http:', 'https:', 'mailto:', 'ftp:'];
-  let safeHref = href;
-
-  try {
-    const url = new URL(href, window.location.origin);
-    if (!allowedProtocols.includes(url.protocol)) {
-      safeHref = '#'; // 阻止危险协议
-    }
-  } catch {
-    // 相对路径或无效 URL，保持原样
-    safeHref = href;
-  }
-
-  const titleAttr = title ? ` title="${title}"` : '';
-  const targetAttr = ' target="_blank" rel="noopener noreferrer"';
-  return `<a href="${safeHref}"${titleAttr}${targetAttr}>${text}</a>`;
-};
-
-// 自定义代码块渲染（添加语言类名）
-const originalCodeRenderer = renderer.code;
-renderer.code = (code, language) => {
-  const langClass = language ? ` class="language-${language}"` : '';
-  return `<pre><code${langClass}>${code}</code></pre>`;
-};
-
-// 应用自定义渲染器
-marked.use({ renderer });
+const ALLOWED_URI_REGEXP = /^(?:(?:https?|mailto|ftp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
 
 /**
  * 将 Markdown 转换为安全的 HTML
@@ -58,17 +16,13 @@ marked.use({ renderer });
  */
 export const markdownToHTML = (markdown: string): string => {
   try {
-    // 输入验证
     if (!markdown || typeof markdown !== 'string') {
       return '<p></p>';
     }
 
-    // 1. 解析 Markdown
-    const rawHtml = marked(markdown);
+    const rawHtml = marked.parse(markdown, { async: false });
 
-    // 2. 清理 XSS（使用 DOMPurify）
-    const cleanHtml = DOMPurify.sanitize(rawHtml, {
-      // 允许的标签
+    return DOMPurify.sanitize(rawHtml, {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'del', 'u', 's',
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -77,17 +31,15 @@ export const markdownToHTML = (markdown: string): string => {
         'a', 'img',
         'table', 'thead', 'tbody', 'tr', 'th', 'td',
         'hr', 'div', 'span',
-        'input', // 任务列表需要
+        'input',
       ],
-      // 允许的属性
       ALLOWED_ATTR: [
         'href', 'src', 'alt', 'class', 'title',
-        'type', 'disabled', 'checked', // 任务列表
+        'type', 'disabled', 'checked',
       ],
       ALLOW_DATA_ATTR: false,
+      ALLOWED_URI_REGEXP,
     });
-
-    return cleanHtml;
   } catch (error) {
     console.error('Markdown parsing error:', error);
     return '<p><strong>Error parsing markdown</strong></p>';
@@ -224,7 +176,6 @@ export const exportToPDF = async (
   filename: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    // 输入验证
     if (!markdown || typeof markdown !== 'string') {
       return { success: false, error: 'Invalid markdown content' };
     }
@@ -233,10 +184,7 @@ export const exportToPDF = async (
       return { success: false, error: 'Invalid filename' };
     }
 
-    // 文件名清理（移除非法字符）
     const safeFilename = filename.replace(/[<>:"/\\|?*]/g, '_');
-
-    // 转换 Markdown
     const html = markdownToHTML(markdown);
 
     const styledHTML = `
@@ -254,6 +202,9 @@ export const exportToPDF = async (
 
     const element = document.createElement('div');
     element.innerHTML = styledHTML;
+
+    const html2pdfModule = await import('html2pdf.js');
+    const html2pdf = html2pdfModule.default;
 
     const opt = {
       margin: 1,
@@ -277,12 +228,11 @@ export const exportToPDF = async (
 /**
  * 导出为 HTML
  */
-export const exportToHTML = (
+export const exportToHTML = async (
   markdown: string,
   filename: string
-): { success: boolean; error?: string } => {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    // 输入验证
     if (!markdown || typeof markdown !== 'string') {
       return { success: false, error: 'Invalid markdown content' };
     }
@@ -291,10 +241,7 @@ export const exportToHTML = (
       return { success: false, error: 'Invalid filename' };
     }
 
-    // 文件名清理
     const safeFilename = filename.replace(/[<>:"/\\|?*]/g, '_');
-
-    // 转换 Markdown
     const html = markdownToHTML(markdown);
 
     const styledHTML = `
@@ -312,6 +259,7 @@ export const exportToHTML = (
       </html>
     `;
 
+    const { saveAs } = await import('file-saver');
     const blob = new Blob([styledHTML], { type: 'text/html;charset=utf-8' });
     saveAs(blob, `${safeFilename}.html`);
 

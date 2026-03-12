@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "A lightweight, modern Markdown editor with live preview",
   "main": "dist-electron/main.js",
-  "author": "Your Name <your.email@example.com>",
+  "author": {
+    "name": "Fupu Technology (Beijing) Co., Ltd.",
+    "email": "jiuyaodijun@yeah.net"
+  },
   "license": "MIT",
   "homepage": "https://github.com/yourusername/md-editor#readme",
   "repository": {
@@ -15,7 +18,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.electron.json && vite build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "build": "npm run typecheck && tsc -p tsconfig.electron.json && vite build",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
     "electron:build": "npm run build && electron-builder",
     "preview": "vite preview",
@@ -58,7 +62,7 @@
   },
   "build": {
     "appId": "com.mdeditor.app",
-    "productName": "MD Editor",
+    "productName": "MDEditor",
     "directories": {
       "output": "release"
     },
@@ -66,6 +70,7 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "icon": "build/icon.png",
     "fileAssociations": [
       {
         "ext": "md",
@@ -94,10 +99,29 @@
     ],
     "mac": {
       "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"]
+      "target": ["dmg", "zip"],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "type": "distribution"
     },
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MDEditor"
     },
     "linux": {
       "target": ["AppImage", "deb"],

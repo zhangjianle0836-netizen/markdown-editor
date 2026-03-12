@@ -5,9 +5,9 @@ import { HelpPanel } from '../HelpPanel/HelpPanel';
 import './Toolbar.css';
 
 interface ToolbarProps {
-  activeTab?: Tab;
+  activeTab: Tab | null;
   onFileOpen: (tab: Tab, isNewFile?: boolean) => void;
-  onTabSave: (tabId: string) => void;
+  onTabSave: () => void;
   showToast: (message: string, type: 'success' | 'error' | 'info') => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
@@ -73,7 +73,7 @@ export function Toolbar({
 
   const handleSaveFile = async () => {
     if (activeTab) {
-      onTabSave(activeTab.id);
+      onTabSave();
     }
   };
 
