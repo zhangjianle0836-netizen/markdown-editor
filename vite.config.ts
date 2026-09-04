@@ -14,7 +14,6 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom'],
           'editor-vendor': ['@uiw/react-md-editor'],
           'markdown-vendor': ['marked', 'dompurify'],
-          'utils-vendor': ['lodash-es'],
         },
       },
     },

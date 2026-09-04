@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { EditorArea } from './components/EditorArea/EditorArea';
 import { Toolbar } from './components/Toolbar/Toolbar';
 import { Toast } from './components/Toast/Toast';
@@ -7,171 +7,264 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useToast } from './hooks/useToast';
 import { generateId } from './utils/id';
 import { getFileName } from './utils/path';
-import { checkCanCloseTab } from './utils/dialog';
+import { getUnsavedChangesAction } from './utils/dialog';
 import './App.css';
 
-// 视图模式类型
 export type ViewMode = 'preview' | 'edit' | 'live';
 
+type CurrentFileUpdater = (currentFile: Tab | null) => Tab | null;
+
 export default function App() {
-  const [currentFile, setCurrentFile] = useState<Tab | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('preview'); // 默认查看视图
+  const [currentFile, setCurrentFileState] = useState<Tab | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('preview');
+  const currentFileRef = useRef<Tab | null>(null);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const { toasts, showToast, removeToast } = useToast();
 
-  // 打开文件后自动设置视图模式
-  const handleFileOpen = useCallback((file: Tab, isNewFile: boolean = false) => {
-    setCurrentFile(file);
-    // 新建文件默认编辑视图，打开文件默认查看视图
-    setViewMode(isNewFile ? 'edit' : 'preview');
+  const updateCurrentFile = useCallback((updater: CurrentFileUpdater): Tab | null => {
+    const nextFile = updater(currentFileRef.current);
+    currentFileRef.current = nextFile;
+    setCurrentFileState(nextFile);
+    return nextFile;
   }, []);
 
-  // 处理从系统打开文件
-  const openFileFromSystem = useCallback(async (data: { path: string; name: string; content: string }) => {
-    // 检查当前文件是否有未保存的更改
-    if (currentFile && currentFile.isModified) {
-      const canClose = await checkCanCloseTab(
-        currentFile.name,
-        currentFile.isModified
+  const saveTab = useCallback(
+    (tab: Tab): Promise<boolean> => {
+      const saveOperation = saveQueueRef.current.then(async () => {
+        if (!window.electronAPI) {
+          showToast(
+            '文件操作仅在 Electron 应用中可用，请使用桌面应用运行',
+            'info'
+          );
+          return false;
+        }
+
+        try {
+          let targetPath = tab.path;
+          if (!targetPath) {
+            const dialogResult = await window.electronAPI.showSaveDialog();
+            if (dialogResult.canceled || !dialogResult.filePath) {
+              return false;
+            }
+            targetPath = dialogResult.filePath;
+          }
+
+          const result = await window.electronAPI.saveFile(
+            targetPath,
+            tab.content
+          );
+          if (!result.success) {
+            showToast(`保存失败：${result.error}`, 'error');
+            return false;
+          }
+
+          const savedRevision = tab.revision;
+          const updatedFile = updateCurrentFile((current) => {
+            if (current?.id !== tab.id) {
+              return current;
+            }
+
+            return {
+              ...current,
+              path: targetPath,
+              name: getFileName(targetPath),
+              isModified: current.revision !== savedRevision,
+            };
+          });
+          const savedLatestRevision =
+            updatedFile?.id !== tab.id || updatedFile.revision === savedRevision;
+
+          showToast(
+            savedLatestRevision ? '文件保存成功' : '此前内容已保存，仍有新的未保存更改',
+            savedLatestRevision ? 'success' : 'info'
+          );
+          return savedLatestRevision;
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : '未知错误';
+          showToast(`保存失败：${errorMessage}`, 'error');
+          return false;
+        }
+      });
+
+      saveQueueRef.current = saveOperation.then(
+        () => undefined,
+        () => undefined
       );
-      if (!canClose) return;
+      return saveOperation;
+    },
+    [showToast, updateCurrentFile]
+  );
+
+  const canReplaceCurrentFile = useCallback(async (): Promise<boolean> => {
+    const file = currentFileRef.current;
+    if (!file || !file.isModified) {
+      return true;
     }
 
-    handleFileOpen({
-      id: generateId(),
-      path: data.path,
-      name: data.name,
-      content: data.content,
-      isModified: false,
-    }, false); // 打开已有文件，使用查看视图
-  }, [currentFile, handleFileOpen]);
-
-  // 监听从系统打开文件的事件
-  useEffect(() => {
-    if (window.electronAPI) {
-      window.electronAPI.onOpenFileFromSystem(openFileFromSystem);
+    const action = await getUnsavedChangesAction(file.name, file.isModified);
+    if (action === 'cancel') {
+      return false;
+    }
+    if (action === 'discard') {
+      return true;
     }
 
-    return () => {
-      if (window.electronAPI) {
-        window.electronAPI.removeOpenFileFromSystemListener();
+    return saveTab(file);
+  }, [saveTab]);
+
+  const handleFileOpen = useCallback(
+    (file: Tab, isNewFile = false) => {
+      updateCurrentFile(() => file);
+      setViewMode(isNewFile ? 'edit' : 'preview');
+    },
+    [updateCurrentFile]
+  );
+
+  const openFileFromSystem = useCallback(
+    async (data: { path: string; name: string; content: string }) => {
+      if (!(await canReplaceCurrentFile())) {
+        return;
       }
-    };
+
+      handleFileOpen(
+        {
+          id: generateId(),
+          path: data.path,
+          name: data.name,
+          content: data.content,
+          isModified: false,
+          revision: 0,
+        },
+        false
+      );
+    },
+    [canReplaceCurrentFile, handleFileOpen]
+  );
+
+  const openFileFromSystemRef = useRef(openFileFromSystem);
+  const canReplaceCurrentFileRef = useRef(canReplaceCurrentFile);
+
+  useEffect(() => {
+    openFileFromSystemRef.current = openFileFromSystem;
   }, [openFileFromSystem]);
 
-  const handleContentChange = useCallback((content: string) => {
-    setCurrentFile((prev) => {
-      if (!prev) {
-        return prev;
-      }
+  useEffect(() => {
+    canReplaceCurrentFileRef.current = canReplaceCurrentFile;
+  }, [canReplaceCurrentFile]);
 
-      if (prev.content === content && prev.isModified) {
-        return prev;
-      }
+  useEffect(() => {
+    if (!window.electronAPI) {
+      return;
+    }
 
-      return { ...prev, content, isModified: true };
+    const unsubscribeOpen = window.electronAPI.onOpenFileFromSystem((data) =>
+      openFileFromSystemRef.current(data)
+    );
+    const unsubscribeClose = window.electronAPI.onCloseRequested(async () => {
+      try {
+        const shouldClose = await canReplaceCurrentFileRef.current();
+        await window.electronAPI.respondToCloseRequest(shouldClose);
+      } catch {
+        await window.electronAPI.respondToCloseRequest(false);
+      }
     });
+
+    void window.electronAPI.notifyRendererReady();
+
+    return () => {
+      unsubscribeOpen();
+      unsubscribeClose();
+    };
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (!currentFile) return;
+  const handleContentChange = useCallback(
+    (content: string) => {
+      updateCurrentFile((current) => {
+        if (!current || current.content === content) {
+          return current;
+        }
 
-    try {
-      if (currentFile.path) {
-        const result = await window.electronAPI.saveFile(
-          currentFile.path,
-          currentFile.content
-        );
-        if (result.success) {
-          setCurrentFile({ ...currentFile, isModified: false });
-          showToast('文件保存成功', 'success');
-        } else {
-          showToast(`保存失败：${result.error}`, 'error');
-        }
-      } else {
-        // 如果没有路径，提示保存对话框
-        const dialogResult = await window.electronAPI.showSaveDialog();
-        if (!dialogResult.canceled && dialogResult.filePath) {
-          const result = await window.electronAPI.saveFile(
-            dialogResult.filePath,
-            currentFile.content
-          );
-          if (result.success) {
-            const fileName = getFileName(dialogResult.filePath);
-            setCurrentFile({
-              ...currentFile,
-              path: dialogResult.filePath,
-              name: fileName,
-              isModified: false,
-            });
-            showToast('文件保存成功', 'success');
-          } else {
-            showToast(`保存失败：${result.error}`, 'error');
-          }
-        }
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : '未知错误';
-      showToast(`保存失败：${errorMessage}`, 'error');
+        return {
+          ...current,
+          content,
+          isModified: true,
+          revision: current.revision + 1,
+        };
+      });
+    },
+    [updateCurrentFile]
+  );
+
+  const handleSave = useCallback(async () => {
+    const file = currentFileRef.current;
+    if (file) {
+      await saveTab(file);
     }
-  }, [currentFile, showToast]);
+  }, [saveTab]);
 
   const handleNewFile = useCallback(async () => {
-    // 检查当前文件是否有未保存的更改
-    if (currentFile && currentFile.isModified) {
-      const canClose = await checkCanCloseTab(
-        currentFile.name,
-        currentFile.isModified
-      );
-      if (!canClose) return;
+    if (!(await canReplaceCurrentFile())) {
+      return;
     }
 
-    handleFileOpen({
-      id: generateId(),
-      path: '',
-      name: '未命名',
-      content: '',
-      isModified: false,
-    }, true); // 新建文件，使用编辑视图
-  }, [currentFile, handleFileOpen]);
+    handleFileOpen(
+      {
+        id: generateId(),
+        path: '',
+        name: '未命名',
+        content: '',
+        isModified: true,
+        revision: 0,
+      },
+      true
+    );
+  }, [canReplaceCurrentFile, handleFileOpen]);
 
   const handleOpenFile = useCallback(async () => {
-    // 检查当前文件是否有未保存的更改
-    if (currentFile && currentFile.isModified) {
-      const canClose = await checkCanCloseTab(
-        currentFile.name,
-        currentFile.isModified
+    if (!window.electronAPI) {
+      showToast(
+        '文件操作仅在 Electron 应用中可用，请使用桌面应用运行',
+        'info'
       );
-      if (!canClose) return;
+      return;
+    }
+
+    if (!(await canReplaceCurrentFile())) {
+      return;
     }
 
     try {
       const result = await window.electronAPI.showOpenDialog();
-      if (!result.canceled && result.filePaths.length > 0) {
-        const filePath = result.filePaths[0];
-        const fileName = getFileName(filePath);
-
-        const fileResult = await window.electronAPI.readFile(filePath);
-        if (fileResult.success && fileResult.content) {
-          handleFileOpen({
-            id: generateId(),
-            path: filePath,
-            name: fileName,
-            content: fileResult.content,
-            isModified: false,
-          }, false); // 打开已有文件，使用查看视图
-        } else {
-          showToast(`打开文件失败：${fileResult.error}`, 'error');
-        }
+      if (result.canceled || result.filePaths.length === 0) {
+        return;
       }
+
+      const filePath = result.filePaths[0];
+      const fileResult = await window.electronAPI.readFile(filePath);
+      if (!fileResult.success) {
+        showToast(`打开文件失败：${fileResult.error}`, 'error');
+        return;
+      }
+
+      handleFileOpen(
+        {
+          id: generateId(),
+          path: filePath,
+          name: getFileName(filePath),
+          content: fileResult.content ?? '',
+          isModified: false,
+          revision: 0,
+        },
+        false
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : '未知错误';
       showToast(`打开文件失败：${errorMessage}`, 'error');
     }
-  }, [currentFile, showToast, handleFileOpen]);
+  }, [canReplaceCurrentFile, handleFileOpen, showToast]);
 
-  // 键盘快捷键
   useKeyboardShortcuts({
     onOpen: handleOpenFile,
     onSave: currentFile ? handleSave : undefined,
@@ -182,9 +275,9 @@ export default function App() {
     <div className="app">
       <Toolbar
         activeTab={currentFile}
-        onFileOpen={handleFileOpen}
+        onNewFile={handleNewFile}
+        onOpenFile={handleOpenFile}
         onTabSave={handleSave}
-        showToast={showToast}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />

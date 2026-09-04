@@ -1,76 +1,25 @@
 import { Tab } from '../../types/electron';
 import { ViewMode } from '../../App';
-import { generateId } from '../../utils/id';
 import { HelpPanel } from '../HelpPanel/HelpPanel';
 import './Toolbar.css';
 
 interface ToolbarProps {
   activeTab: Tab | null;
-  onFileOpen: (tab: Tab, isNewFile?: boolean) => void;
+  onNewFile: () => void;
+  onOpenFile: () => void;
   onTabSave: () => void;
-  showToast: (message: string, type: 'success' | 'error' | 'info') => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 }
 
 export function Toolbar({
   activeTab,
-  onFileOpen,
+  onNewFile,
+  onOpenFile,
   onTabSave,
-  showToast,
   viewMode,
   onViewModeChange,
 }: ToolbarProps) {
-  const handleNewFile = () => {
-    const newTab: Tab = {
-      id: generateId(),
-      path: '',
-      name: '未命名',
-      content: '',
-      isModified: false,
-    };
-    onFileOpen(newTab, true); // 新建文件
-  };
-
-  const handleOpenFile = async () => {
-    // 检查是否在 Electron 环境中
-    if (!window.electronAPI) {
-      showToast(
-        '文件操作仅在 Electron 应用中可用，请使用 "npm run electron:dev" 运行',
-        'info'
-      );
-      return;
-    }
-
-    try {
-      const result = await window.electronAPI.showOpenDialog();
-      if (!result.canceled && result.filePaths.length > 0) {
-        const filePath = result.filePaths[0];
-
-        // 获取文件名
-        const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || filePath;
-
-        const fileResult = await window.electronAPI.readFile(filePath);
-        if (fileResult.success && fileResult.content) {
-          const newTab: Tab = {
-            id: generateId(),
-            path: filePath,
-            name: fileName,
-            content: fileResult.content,
-            isModified: false,
-          };
-          onFileOpen(newTab, false); // 打开已有文件
-        } else {
-          showToast(`打开文件失败：${fileResult.error}`, 'error');
-        }
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : '未知错误';
-      showToast(`打开文件失败：${errorMessage}`, 'error');
-    }
-  };
-
   const handleSaveFile = async () => {
     if (activeTab) {
       onTabSave();
@@ -87,10 +36,10 @@ export function Toolbar({
   return (
     <div className={`toolbar ${isMac ? 'toolbar-macos' : ''}`}>
       <div className="toolbar-left">
-        <button onClick={handleNewFile} className="toolbar-button toolbar-button-primary">
+        <button onClick={onNewFile} className="toolbar-button toolbar-button-primary">
           新建
         </button>
-        <button onClick={handleOpenFile} className="toolbar-button">
+        <button onClick={onOpenFile} className="toolbar-button">
           打开
         </button>
         <button

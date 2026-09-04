@@ -40,8 +40,8 @@ MD Editor is a fast, secure, and lightweight desktop Markdown editor built with 
 - ✅ **XSS Protection** - Secure HTML sanitization with DOMPurify
 
 #### Security & Performance
-- 🔒 **Path Validation** - Prevents directory traversal attacks
-- ⚡ **Debounced Rendering** - Optimized real-time preview
+- 🔒 **Capability-based File Access** - Only user-authorized files can be read or written
+- ⚡ **Bounded Rendering** - Deferred preview updates and capped search results
 - 🚀 **Code Splitting** - Faster startup with optimized chunks
 - 📦 **Small Bundle** - Only 104MB installed
 
@@ -53,7 +53,7 @@ MD Editor is a fast, secure, and lightweight desktop Markdown editor built with 
 ### 🚀 Quick Start
 
 #### Prerequisites
-- Node.js 16+
+- Node.js 22.12+
 - npm or yarn
 
 #### Installation
@@ -107,7 +107,7 @@ For detailed usage instructions, see [User Guide](./docs/user-guide.md).
 
 ### 🛠️ Tech Stack
 
-- **Electron 31** - Cross-platform desktop framework
+- **Electron 44** - Cross-platform desktop framework
 - **React 18** - Modern UI library
 - **TypeScript** - Type-safe development
 - **Vite** - Next-generation build tool
@@ -154,6 +154,8 @@ md-editor/
 - `npm run build` - Build React application
 - `npm run electron:dev` - Start Electron in development mode
 - `npm run electron:build` - Build Electron app for production
+
+For the reproducible macOS Developer ID signing flow, see [AI Packaging Guide](./PACKAGING_FOR_AI.md).
 
 #### Architecture
 
@@ -249,8 +251,8 @@ MD Editor 是一个基于 Electron 和 React 构建的快速、安全、轻量�
 - ✅ **XSS 防护** - 使用 DOMPurify 进行安全的 HTML 净化
 
 #### 安全与性能
-- 🔒 **路径验证** - 防止目录遍历攻击
-- ⚡ **防抖渲染** - 优化的实时预览
+- 🔒 **授权文件访问** - 仅允许读写用户明确选择的文件
+- ⚡ **有界渲染** - 延迟预览更新并限制搜索结果规模
 - 🚀 **代码分割** - 通过优化块实现更快的启动
 - 📦 **小巧体积** - 仅 104MB 安装大小
 
@@ -262,7 +264,7 @@ MD Editor 是一个基于 Electron 和 React 构建的快速、安全、轻量�
 ### 🚀 快速开始
 
 #### 环境要求
-- Node.js 16+
+- Node.js 22.12+
 - npm 或 yarn
 
 #### 安装步骤
@@ -316,7 +318,7 @@ npm run electron:build
 
 ### 🛠️ 技术栈
 
-- **Electron 31** - 跨平台桌面框架
+- **Electron 44** - 跨平台桌面框架
 - **React 18** - 现代 UI 库
 - **TypeScript** - 类型安全开发
 - **Vite** - 下一代构建工具
@@ -341,6 +343,10 @@ npm run electron:build
 - [ ] 插件系统
 
 版本历史请查看 [CHANGELOG.md](./CHANGELOG.md)。
+
+### 📦 打包与签名
+
+后续需要让 AI 或维护者复用 macOS Developer ID 打包流程时，请查看 [AI 打包与签名操作手册](./PACKAGING_FOR_AI.md)。
 
 ### 🤝 贡献
 

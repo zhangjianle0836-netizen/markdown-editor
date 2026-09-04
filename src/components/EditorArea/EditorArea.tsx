@@ -1,5 +1,4 @@
-import { Suspense, lazy, memo, useEffect, useRef, useState } from 'react';
-import { debounce } from 'lodash-es';
+import { Suspense, lazy, memo } from 'react';
 import { Tab } from '../../types/electron';
 import { ViewMode } from '../../App';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -22,49 +21,8 @@ function EditorAreaComponent({
   onNewFile,
   onOpenFile,
 }: EditorAreaProps) {
-  const [content, setContent] = useState('');
-
-  // 使用 ref 存储防抖函数
-  const debouncedOnChangeRef = useRef(
-    debounce((newContent: string) => {
-      onContentChange(newContent);
-    }, 300)
-  );
-
-  // 更新防抖函数的回调（避免重新创建）
-  useEffect(() => {
-    const debounced = debouncedOnChangeRef.current;
-    debounced.cancel(); // 先取消之前的
-
-    debouncedOnChangeRef.current = debounce((newContent: string) => {
-      onContentChange(newContent);
-    }, 300);
-
-    return () => {
-      debouncedOnChangeRef.current.cancel();
-    };
-  }, [onContentChange]);
-
-  // 切换标签时更新内容
-  useEffect(() => {
-    if (tab) {
-      setContent(tab.content);
-      // 取消之前的防抖操作
-      debouncedOnChangeRef.current.cancel();
-    }
-  }, [tab?.id]); // 只在标签 ID 变化时更新
-
-  // 组件卸载时清理
-  useEffect(() => {
-    return () => {
-      debouncedOnChangeRef.current.cancel();
-    };
-  }, []);
-
   const handleChange = (value: string | undefined) => {
-    const newContent = value || '';
-    setContent(newContent);
-    debouncedOnChangeRef.current(newContent);
+    onContentChange(value || '');
   };
 
   if (!tab) {
@@ -110,7 +68,7 @@ function EditorAreaComponent({
   if (viewMode === 'preview') {
     return (
       <div className="editor-area">
-        <MarkdownPreview content={content} />
+        <MarkdownPreview content={tab.content} />
       </div>
     );
   }
@@ -119,7 +77,7 @@ function EditorAreaComponent({
     <div className="editor-area">
       <Suspense fallback={<div className="editor-loading">编辑器加载中...</div>}>
         <LazyMarkdownEditor
-          value={content}
+          value={tab.content}
           onChange={handleChange}
           height="100%"
           preview={getPreviewMode()}

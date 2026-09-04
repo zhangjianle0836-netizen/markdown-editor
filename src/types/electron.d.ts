@@ -1,4 +1,4 @@
-import { OpenDialogReturnValue, SaveDialogReturnValue, MessageBoxReturnValue } from 'electron';
+import { OpenDialogReturnValue, SaveDialogReturnValue } from 'electron';
 
 export interface Tab {
   id: string;
@@ -6,6 +6,7 @@ export interface Tab {
   name: string;
   content: string;
   isModified: boolean;
+  revision: number;
 }
 
 export interface FileReadResult {
@@ -24,12 +25,15 @@ export interface ElectronAPI {
   saveFile: (filePath: string, content: string) => Promise<FileSaveResult>;
   showOpenDialog: () => Promise<OpenDialogReturnValue>;
   showSaveDialog: () => Promise<SaveDialogReturnValue>;
-  showMessageBox: (options: Electron.MessageBoxOptions) => Promise<MessageBoxReturnValue>;
-  getHomePath: () => Promise<string>;
-  getPendingFile: () => Promise<string | null>;
-  clearPendingFile: () => Promise<void>;
-  onOpenFileFromSystem: (callback: (data: { path: string; name: string; content: string }) => void) => void;
-  removeOpenFileFromSystemListener: () => void;
+  showUnsavedChangesDialog: (tabName: string) => Promise<{ response: number }>;
+  notifyRendererReady: () => Promise<boolean>;
+  respondToCloseRequest: (shouldClose: boolean) => Promise<boolean>;
+  onOpenFileFromSystem: (
+    callback: (data: { path: string; name: string; content: string }) =>
+      | void
+      | Promise<void>
+  ) => () => void;
+  onCloseRequested: (callback: () => void | Promise<void>) => () => void;
 }
 
 declare global {

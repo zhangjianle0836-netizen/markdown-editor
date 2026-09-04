@@ -1,256 +1,128 @@
-# MD Editor 项目结构
+# MD Editor 项目架构
 
-## 📁 目录结构
+MD Editor 是一个 Electron + React + TypeScript 桌面应用，当前核心形态是“单文件、预览优先、本地轻量阅读与编辑”。
 
-```
+## 技术栈
+
+- Electron 44：桌面壳、窗口生命周期、原生文件对话框和文件关联
+- React 18：渲染进程 UI
+- TypeScript：主进程和渲染进程类型约束
+- Vite：前端构建和代码分割
+- marked + DOMPurify：Markdown 解析和 HTML 清洗
+- @uiw/react-md-editor：编辑/分屏模式下按需加载的编辑器
+
+## 目录结构
+
+```text
 md-editor/
-├── .github/                    # GitHub 配置
-│   ├── ISSUE_TEMPLATE/         # Issue 模板
-│   │   ├── bug_report.md      # Bug 报告模板
-│   │   └── feature_request.md # 功能请求模板
-│   ├── workflows/             # GitHub Actions
-│   │   └── ci.yml            # CI/CD 工作流
-│   └── pull_request_template.md # PR 模板
-│
-├── .vscode/                    # VS Code 配置（可选）
-│
-├── build/                      # 构建资源
-│   └── icon.svg               # 应用图标（SVG）
-│
-├── dist/                       # Vite 构建输出（git 忽略）
-│   └── assets/                # 编译后的资源
-│
-├── dist-electron/              # Electron 构建输出（git 忽略）
-│   ├── main.js                # 编译后的主进程
-│   └── preload.js             # 编译后的预加载脚本
-│
-├── docs/                       # 文档目录
-│   └── FILE_ASSOCIATION.md    # macOS 文件关联指南
-│
-├── electron/                   # Electron 主进程
-│   ├── main.ts                # 主进程入口
-│   └── preload.ts             # 预加载脚本
-│
-├── node_modules/               # 依赖（git 忽略）
-│
-├── public/                     # 静态资源
-│   └── vite.svg               # Vite logo
-│
-├── release/                    # 构建产物（git 忽略）
-│   ├── MD Editor-1.0.0-arm64.dmg
-│   └── MD Editor-1.0.0-arm64-mac.zip
-│
-├── src/                        # React 源代码
-│   ├── components/            # React 组件
-│   │   ├── EditorArea/       # 编辑器区域
-│   │   │   ├── EditorArea.tsx
-│   │   │   └── EditorArea.css
-│   │   ├── Toast/            # 通知组件
-│   │   │   ├── Toast.tsx
-│   │   │   ├── Toast.css
-│   │   │   └── useToast.ts
-│   │   └── Toolbar/          # 工具栏
-│   │       ├── Toolbar.tsx
-│   │       └── Toolbar.css
-│   ├── hooks/                # 自定义 Hooks
-│   │   ├── useKeyboardShortcuts.ts
-│   │   └── useToast.ts
-│   ├── types/                # TypeScript 类型
-│   │   └── electron.d.ts
-│   ├── utils/                # 工具函数
-│   │   ├── dialog.ts
-│   │   ├── export.ts
-│   │   ├── id.ts
-│   │   ├── markdownRenderer.ts
-│   │   └── path.ts
-│   ├── App.tsx               # 根组件
-│   ├── App.css               # 根样式
-│   ├── main.tsx              # 入口文件
-│   └── index.css             # 全局样式
-│
-├── .editorconfig              # 编辑器配置
-├── .gitignore                 # Git 忽略规则
-├── CHANGELOG.md               # 版本更新日志
-├── CODE_OF_CONDUCT.md         # 行为准则
-├── CONTRIBUTING.md            # 贡献指南
-├── DEVELOPER_GUIDE.md         # 开发者文档
-├── LICENSE                    # MIT 许可证
-├── OPEN_SOURCE_CHECKLIST.md   # 开源准备清单
-├── package-lock.json          # 依赖锁定文件
-├── package.json               # 项目配置
-├── README.md                  # 项目主文档
-├── tsconfig.electron.json     # Electron TS 配置
-├── tsconfig.json              # TypeScript 配置
-├── tsconfig.node.json         # Node TS 配置
-├── USER_GUIDE.md              # 用户指南
-└── vite.config.ts             # Vite 配置
+├── electron/
+│   ├── main.ts              # Electron 主进程、IPC、文件读写、文件关联
+│   ├── preload.ts           # contextBridge 安全 API
+│   └── security.ts          # URL、路径和文件参数的纯函数安全校验
+├── src/
+│   ├── App.tsx              # 单文件状态、保存/打开协调、快捷键
+│   ├── components/
+│   │   ├── EditorArea/      # 预览、编辑器 lazy loader、阅读样式
+│   │   ├── HelpPanel/       # 帮助面板
+│   │   ├── Toast/           # 通知
+│   │   └── Toolbar/         # 工具栏和视图切换
+│   ├── hooks/               # 快捷键、Toast
+│   ├── styles/              # 全局样式和设计变量
+│   ├── types/               # Electron API 类型
+│   └── utils/               # Markdown 渲染、导出、路径、对话框
+├── docs/                    # 用户和开发文档
+├── build/                   # 打包资源
+└── vite.config.ts           # Vite 构建配置
 ```
 
-## 📄 重要文件说明
+## 运行时架构
 
-### 配置文件
+### 主进程
 
-| 文件 | 用途 |
-|------|------|
-| `package.json` | 项目元数据、依赖、脚本配置 |
-| `tsconfig.json` | TypeScript 编译器配置 |
-| `vite.config.ts` | Vite 构建工具配置 |
-| `.gitignore` | Git 版本控制忽略规则 |
-| `.editorconfig` | 跨编辑器代码风格配置 |
+`electron/main.ts` 负责：
 
-### 文档文件
+- 创建和管理 `BrowserWindow`
+- 注册 `file:read`、`file:save`、`dialog:*` 等 IPC handler
+- 校验 IPC 来源，并仅允许读写由系统对话框或文件关联授权的路径
+- 使用临时文件、同步和重命名完成原子保存
+- 处理 macOS `open-file`、单实例和命令行传入的 Markdown 文件
+- 拦截主窗口导航，将安全的外部链接交给系统浏览器
+- 通过 `file:openFromSystem` 把系统打开的文件发送给渲染进程
 
-| 文件 | 用途 |
-|------|------|
-| `README.md` | 项目主文档，包含功能介绍和快速开始 |
-| `USER_GUIDE.md` | 详细用户使用指南 |
-| `DEVELOPER_GUIDE.md` | 开发者文档和架构说明 |
-| `CONTRIBUTING.md` | 贡献指南和开发流程 |
-| `CODE_OF_CONDUCT.md` | 社区行为准则 |
-| `CHANGELOG.md` | 版本历史和更新日志 |
+### 预加载脚本
 
-### 构建配置
+`electron/preload.ts` 通过 `contextBridge.exposeInMainWorld` 暴露最小化的 `window.electronAPI`，渲染进程不直接访问 Node.js API。
 
-| 文件 | 用途 |
-|------|------|
-| `electron/main.ts` | Electron 主进程代码 |
-| `electron/preload.ts` | 预加载脚本，暴露安全 API |
-| `src/main.tsx` | React 应用入口 |
-| `src/App.tsx` | React 根组件 |
+### 渲染进程
 
-### GitHub 配置
+`src/App.tsx` 是单文件状态中心，维护：
 
-| 文件 | 用途 |
-|------|------|
-| `.github/workflows/ci.yml` | CI/CD 自动化工作流 |
-| `.github/ISSUE_TEMPLATE/` | Issue 模板 |
-| `.github/pull_request_template.md` | Pull Request 模板 |
+- 当前文件 `currentFile`
+- 当前视图 `preview | edit | live`
+- 保存、新建、打开和系统文件打开流程
+- 未保存更改处理：保存、丢弃或取消，包括关闭窗口和退出应用
+- 通过内容 revision 避免异步保存把新内容错误标记为已保存
 
-## 🔧 技术栈
+`Toolbar` 只负责触发 App 下发的动作和切换视图，不直接读写文件。
 
-### 前端
-- **React 18** - UI 框架
-- **TypeScript** - 类型安全
-- **Vite** - 构建工具
+`EditorArea` 根据视图选择预览或编辑器。预览模式不加载 `@uiw/react-md-editor`；编辑和分屏模式才 lazy load 编辑器 chunk。
 
-### 桌面
-- **Electron 31** - 桌面应用框架
-- **electron-builder** - 打包工具
+`MarkdownPreview` 负责：
 
-### Markdown
-- **marked.js** - Markdown 解析
-- **DOMPurify** - XSS 防护
-- **@uiw/react-md-editor** - 编辑器组件
+- 动态加载 `markdownRenderer`
+- 提取标题目录
+- 为标题添加锚点
+- 包装代码块并做轻量高亮
+- 正文搜索、高亮命中和命中导航
+- 阅读进度计算
 
-### 开发工具
-- **TypeScript** - 类型检查
-- **ESLint** - 代码检查（待添加）
-- **Prettier** - 代码格式化（待添加）
+## 数据流
 
-## 📊 代码统计
+### 打开文件
 
-| 类型 | 文件数 | 代码行数 |
-|------|--------|----------|
-| TypeScript | ~15 | ~800 |
-| CSS | ~5 | ~400 |
-| Config | ~5 | ~200 |
-| Docs | ~8 | ~1500 |
-
-## 🔄 工作流程
-
-### 开发流程
-```
-修改代码 → npm run dev → 浏览器预览
-         ↓
-修改 Electron → npm run electron:dev → 应用预览
-         ↓
-npm run build → 构建测试
-         ↓
-npm run electron:build → 生成安装包
+```text
+Toolbar / 快捷键
+  -> App 检查未保存更改
+  -> electronAPI.showOpenDialog()
+  -> electronAPI.readFile(path)
+  -> main.ts 确认路径已由对话框授权，并校验大小后读取 UTF-8
+  -> App 设置 currentFile，默认进入 preview
 ```
 
-### 发布流程
-```
-更新版本号 → 更新 CHANGELOG → 提交代码
-         ↓
-创建 Git 标签 → 推送到 GitHub
-         ↓
-CI/CD 自动构建 → 上传 Release 文件
-         ↓
-发布公告 → 社区推广
-```
+### 通过系统打开文件
 
-## 🎯 未来规划
-
-### 短期（v1.1）
-- [ ] 添加 ESLint 和 Prettier
-- [ ] 添加单元测试
-- [ ] 优化性能
-
-### 中期（v1.5）
-- [ ] 深色主题
-- [ ] 自动保存
-- [ ] 导出 PDF/HTML
-
-### 长期（v2.0）
-- [ ] 插件系统
-- [ ] 云同步
-- [ ] 协作编辑
-
-## 📦 打包产物
-
-### macOS
-- `MD Editor-1.0.0-arm64.dmg` (104 MB) - Apple Silicon
-- `MD Editor-1.0.0-x64.dmg` - Intel Mac
-- `MD Editor-1.0.0-arm64-mac.zip` (101 MB) - 压缩包
-
-### Windows
-- `MD Editor Setup 1.0.0.exe` - 安装程序
-- `MD Editor-1.0.0-portable.exe` - 便携版
-
-### Linux
-- `md-editor-1.0.0-x86_64.AppImage` - 通用格式
-- `md-editor_1.0.0_amd64.deb` - Debian/Ubuntu
-- `md-editor-1.0.0.x86_64.rpm` - RedHat/Fedora
-
-## 🚀 快速命令
-
-```bash
-# 安装依赖
-npm install
-
-# 开发模式（浏览器）
-npm run dev
-
-# 开发模式（Electron）
-npm run electron:dev
-
-# 构建前端
-npm run build
-
-# 构建应用
-npm run electron:build
-
-# 代码检查（待添加）
-npm run lint
-
-# 代码格式化（待添加）
-npm run format
-
-# 运行测试（待添加）
-npm test
+```text
+系统文件关联 / 命令行参数
+  -> main.ts 排队并等待 renderer ready，再读取和校验文件
+  -> webContents.send('file:openFromSystem')
+  -> App 检查未保存更改
+  -> App 设置 currentFile，默认进入 preview
 ```
 
-## 📚 相关链接
+### 保存文件
 
-- [Electron 文档](https://www.electronjs.org/docs)
-- [React 文档](https://react.dev/)
-- [Vite 文档](https://vitejs.dev/)
-- [TypeScript 文档](https://www.typescriptlang.org/docs/)
-- [marked.js 文档](https://marked.js.org/)
+```text
+Toolbar / 快捷键
+  -> App.saveTab()
+  -> 有路径：electronAPI.saveFile(path, content)
+  -> 无路径：electronAPI.showSaveDialog() 后保存
+  -> main.ts 校验路径授权和内容大小后原子写入 UTF-8
+  -> App 仅在 revision 未变化时标记 isModified = false
+```
 
----
+## 构建策略
 
-**维护者:** MD Editor Contributors
-**许可证:** MIT
-**最后更新:** 2026-03-03
+`vite.config.ts` 使用手动分包：
+
+- `react-vendor`
+- `editor-vendor`
+- `markdown-vendor`
+
+编辑器和 Markdown 解析依赖不是预览首屏的必要资源，应继续保持按需加载。
+
+## 当前边界
+
+- 当前是单文件工作区，不提供多标签和文件树。
+- 自动保存未实现。
+- PDF/HTML 导出尚未实现，后续应作为独立工作流引入，避免未使用依赖进入生产包。
+- Markdown 预览增强逻辑运行在渲染进程主线程，后续处理超大文档时可考虑 Web Worker 或更结构化的 AST 管线。

@@ -30,7 +30,7 @@ Features:
 - Performance: Code splitting, optimized bundle
 
 Tech Stack:
-- Electron 31
+- Electron 44
 - React 18
 - TypeScript
 - Vite

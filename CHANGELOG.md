@@ -5,6 +5,19 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 并且本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [1.0.1] - 2026-09-04
+
+### 优化
+- 加固 Electron 渲染进程隔离、导航拦截、IPC 来源校验和本地文件访问授权。
+- 使用原子写入和修订号跟踪，降低保存竞态、覆盖错误文件和意外丢失未保存内容的风险。
+- 完善系统文件打开、单实例、关闭确认与多种 Markdown 扩展名支持。
+- 改进预览标题提取和搜索结果上限，避免大文档搜索导致界面卡顿。
+- 移除未使用的导出代码与依赖，升级 Electron 和打包工具，补充安全回归测试。
+
+### 工程
+- 私钥、证书和本地工作目录保留在项目目录中，但通过 `.gitignore` 排除出 Git。
+- 更新开发、架构、用户和代码签名文档，并纳入依赖锁文件。
+
 ## [1.0.0] - 2026-03-03
 
 ### 新增
@@ -53,11 +66,13 @@
 ## 版本说明
 
 - **[1.0.0]**: 基础功能完整版本
+- **[1.0.1]**: 文件安全、保存可靠性与桌面应用生命周期优化
 - **[1.1.0]**: 计划添加导出功能
 - **[1.2.0]**: 计划添加主题系统
 - **[2.0.0]**: 计划添加协作功能
 
 ---
 
-[未发布]: https://github.com/your-username/markdown-editor/compare/v1.0.0...HEAD
+[未发布]: https://github.com/your-username/markdown-editor/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/your-username/markdown-editor/releases/tag/v1.0.1
 [1.0.0]: https://github.com/your-username/markdown-editor/releases/tag/v1.0.0

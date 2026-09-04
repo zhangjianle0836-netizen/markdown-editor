@@ -10,19 +10,39 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 对话框
   showOpenDialog: () => ipcRenderer.invoke('dialog:open'),
   showSaveDialog: () => ipcRenderer.invoke('dialog:save'),
-  showMessageBox: (options: Electron.MessageBoxOptions) =>
-    ipcRenderer.invoke('dialog:message', options),
+  showUnsavedChangesDialog: (tabName: string) =>
+    ipcRenderer.invoke('dialog:unsavedChanges', tabName),
 
-  // 系统信息
-  getHomePath: () => ipcRenderer.invoke('system:home'),
-  getPendingFile: () => ipcRenderer.invoke('system:getPendingFile'),
-  clearPendingFile: () => ipcRenderer.invoke('system:clearPendingFile'),
+  // 生命周期
+  notifyRendererReady: () => ipcRenderer.invoke('renderer:ready'),
+  respondToCloseRequest: (shouldClose: boolean) =>
+    ipcRenderer.invoke('app:closeResponse', shouldClose),
 
   // 文件关联打开监听
-  onOpenFileFromSystem: (callback: (data: { path: string; name: string; content: string }) => void) => {
-    ipcRenderer.on('file:openFromSystem', (_, data) => callback(data));
+  onOpenFileFromSystem: (
+    callback: (data: { path: string; name: string; content: string }) =>
+      | void
+      | Promise<void>
+  ) => {
+    let queue = Promise.resolve();
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      data: { path: string; name: string; content: string }
+    ) => {
+      queue = queue.then(() => callback(data)).catch((error) => {
+        console.error('[Preload] Failed to process system file:', error);
+      });
+    };
+    ipcRenderer.on('file:openFromSystem', listener);
+    return () => ipcRenderer.removeListener('file:openFromSystem', listener);
   },
-  removeOpenFileFromSystemListener: () => {
-    ipcRenderer.removeAllListeners('file:openFromSystem');
+  onCloseRequested: (callback: () => void | Promise<void>) => {
+    const listener = () => {
+      void Promise.resolve(callback()).catch((error) => {
+        console.error('[Preload] Failed to process close request:', error);
+      });
+    };
+    ipcRenderer.on('app:requestClose', listener);
+    return () => ipcRenderer.removeListener('app:requestClose', listener);
   },
 });

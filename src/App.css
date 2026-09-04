@@ -10,31 +10,6 @@
   transition: background var(--transition-normal), color var(--transition-normal);
 }
 
-.app::before,
-.app::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  filter: blur(8px);
-}
-
-.app::before {
-  width: 520px;
-  height: 520px;
-  top: -160px;
-  right: -120px;
-  background: radial-gradient(circle, rgba(255, 122, 89, 0.18) 0%, rgba(255, 122, 89, 0) 68%);
-}
-
-.app::after {
-  width: 420px;
-  height: 420px;
-  left: -140px;
-  bottom: -140px;
-  background: radial-gradient(circle, rgba(24, 144, 255, 0.14) 0%, rgba(24, 144, 255, 0) 70%);
-}
-
 /* 主内容区域 */
 .main-container {
   display: flex;
@@ -43,10 +18,10 @@
   position: relative;
   margin: 0 var(--app-shell-gap) var(--app-shell-gap);
   border: 1px solid var(--border-primary);
-  border-radius: 28px;
-  background: var(--bg-panel);
-  box-shadow: var(--shadow-xl), var(--shadow-glow);
-  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 14px 40px rgba(28, 34, 48, 0.08);
+  backdrop-filter: blur(14px);
 }
 
 /* 编辑器容器 */

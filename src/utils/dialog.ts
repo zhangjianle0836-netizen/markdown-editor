@@ -1,40 +1,33 @@
+export type UnsavedChangesAction = 'save' | 'discard' | 'cancel';
+
 /**
- * 检查是否可以关闭标签
- * 如果有未保存的更改，提示用户
+ * 获取未保存更改的处理方式。
  */
-export const checkCanCloseTab = async (
+export const getUnsavedChangesAction = async (
   tabName: string,
   isModified: boolean
-): Promise<boolean> => {
-  if (!isModified) return true;
+): Promise<UnsavedChangesAction> => {
+  if (!isModified) return 'discard';
 
   // 使用 Electron 的对话框
-  if (window.electronAPI && window.electronAPI.showMessageBox) {
+  if (window.electronAPI && window.electronAPI.showUnsavedChangesDialog) {
     try {
-      const result = await window.electronAPI.showMessageBox({
-        type: 'warning',
-        buttons: ['Save', "Don't Save", 'Cancel'],
-        defaultId: 0,
-        cancelId: 2,
-        title: 'Unsaved Changes',
-        message: `Do you want to save changes to "${tabName}"?`,
-        detail: 'Your changes will be lost if you don\'t save them.',
-      });
+      const result = await window.electronAPI.showUnsavedChangesDialog(tabName);
 
-      // 0: Save, 1: Don't Save, 2: Cancel
-      if (result.response === 2) return false; // Cancel
-      return true; // Allow close (Save or Don't Save)
+      if (result.response === 0) return 'save';
+      if (result.response === 1) return 'discard';
+      return 'cancel';
     } catch (error) {
       console.error('Failed to show message box:', error);
       // 降级到浏览器确认框
-      return confirm(
-        `"${tabName}" has unsaved changes. Are you sure you want to close it?`
-      );
+      return confirm(`“${tabName}”有未保存的更改，确定不保存并继续吗？`)
+        ? 'discard'
+        : 'cancel';
     }
   }
 
   // 降级到浏览器确认框
-  return confirm(
-    `"${tabName}" has unsaved changes. Are you sure you want to close it?`
-  );
+  return confirm(`“${tabName}”有未保存的更改，确定不保存并继续吗？`)
+    ? 'discard'
+    : 'cancel';
 };

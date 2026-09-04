@@ -11,6 +11,7 @@
 ### 开发者文档
 - **[开发者指南](./developer-guide.md)** - 架构说明、开发环境配置和贡献流程
 - **[项目架构](./architecture.md)** - 项目结构和技术栈详解
+- **[AI 打包与签名操作手册](../PACKAGING_FOR_AI.md)** - macOS Developer ID 打包、签名与验证流程
 
 ### 贡献指南
 - **[Git 提交规范](./contributing/git-commit-guide.md)** - 代码提交的最佳实践
@@ -35,6 +36,9 @@
 
 ### 我想设置文件关联（macOS）
 → 查看 [文件关联设置](./features/file-association.md)
+
+### 我想打包签名 macOS 版本
+→ 查看 [AI 打包与签名操作手册](../PACKAGING_FOR_AI.md)
 
 ## 🌍 多语言支持
 

@@ -24,6 +24,8 @@ interface SearchMatch {
   level: number | null;
 }
 
+const MAX_SEARCH_MATCHES = 500;
+
 let converter: MarkdownConverter | null = null;
 let converterLoadingPromise: Promise<MarkdownConverter> | null = null;
 
@@ -51,45 +53,6 @@ const slugify = (value: string): string => {
     .replace(/[^\w\u4e00-\u9fa5-]/g, '');
 
   return normalized || 'section';
-};
-
-const extractHeadings = (markdown: string): HeadingItem[] => {
-  const headings: HeadingItem[] = [];
-  const slugCount = new Map<string, number>();
-  const lines = markdown.split('\n');
-  let inFence = false;
-
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-
-    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
-      inFence = !inFence;
-      return;
-    }
-
-    if (inFence) {
-      return;
-    }
-
-    const match = /^(#{1,6})\s+(.*)$/.exec(trimmed);
-    if (!match) {
-      return;
-    }
-
-    const level = match[1].length;
-    const text = match[2].trim().replace(/#+$/, '').trim();
-    const baseSlug = slugify(text);
-    const currentCount = slugCount.get(baseSlug) || 0;
-    slugCount.set(baseSlug, currentCount + 1);
-
-    headings.push({
-      id: currentCount > 0 ? `${baseSlug}-${currentCount + 1}` : baseSlug,
-      level,
-      text,
-    });
-  });
-
-  return headings;
 };
 
 const getCodeLanguage = (codeElement: Element | null): string => {
@@ -156,16 +119,24 @@ const highlightCode = (source: string, language: string): string => {
   return html.replace(/@@TOKEN_(\d+)@@/g, (_match, index) => placeholders[Number(index)] || '');
 };
 
-const buildEnhancedHtml = (rawHtml: string, headings: HeadingItem[]): string => {
+const buildEnhancedHtml = (
+  rawHtml: string
+): { html: string; headings: HeadingItem[] } => {
   const parser = new DOMParser();
   const documentNode = parser.parseFromString(rawHtml, 'text/html');
   const headingNodes = documentNode.body.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  const headings: HeadingItem[] = [];
+  const slugCount = new Map<string, number>();
 
-  headingNodes.forEach((headingNode, index) => {
-    const heading = headings[index];
-    if (!heading) {
-      return;
-    }
+  headingNodes.forEach((headingNode) => {
+    const text = headingNode.textContent?.trim() || '未命名章节';
+    const level = Number(headingNode.tagName.slice(1));
+    const baseSlug = slugify(text);
+    const currentCount = slugCount.get(baseSlug) || 0;
+    const id = currentCount > 0 ? `${baseSlug}-${currentCount + 1}` : baseSlug;
+    slugCount.set(baseSlug, currentCount + 1);
+    const heading = { id, level, text };
+    headings.push(heading);
 
     headingNode.id = heading.id;
     headingNode.classList.add('markdown-heading');
@@ -209,19 +180,24 @@ const buildEnhancedHtml = (rawHtml: string, headings: HeadingItem[]): string => 
     wrapper.appendChild(preNode);
   });
 
-  return documentNode.body.innerHTML;
+  return { html: documentNode.body.innerHTML, headings };
 };
 
 function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
   const deferredContent = useDeferredValue(content);
   const containerRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLElement | null>(null);
+  const tocBodyRef = useRef<HTMLDivElement | null>(null);
+  const lastTocSyncAtRef = useRef(0);
+  const lastMatchSyncAtRef = useRef(0);
   const [html, setHtml] = useState('<p></p>');
   const [headings, setHeadings] = useState<HeadingItem[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
   const [matches, setMatches] = useState<SearchMatch[]>([]);
+  const [searchResultsTruncated, setSearchResultsTruncated] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
 
   useEffect(() => {
@@ -229,15 +205,11 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
 
     const renderMarkdown = async () => {
       const markdownToHTML = await loadConverter();
-      const nextHeadings = extractHeadings(deferredContent);
-      const nextHtml = buildEnhancedHtml(
-        markdownToHTML(deferredContent),
-        nextHeadings
-      );
+      const rendered = buildEnhancedHtml(markdownToHTML(deferredContent));
 
       if (isActive) {
-        setHeadings(nextHeadings);
-        setHtml(nextHtml);
+        setHeadings(rendered.headings);
+        setHtml(rendered.html);
       }
     };
 
@@ -255,7 +227,9 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
     }
 
     const headingNodes = Array.from(
-      articleNode.querySelectorAll<HTMLElement>('h1[id], h2[id], h3[id], h4[id]')
+      articleNode.querySelectorAll<HTMLElement>(
+        'h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]'
+      )
     );
 
     if (headingNodes.length === 0) {
@@ -288,13 +262,23 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
   }, [html]);
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchTerm]);
+
+  useEffect(() => {
     const articleNode = articleRef.current;
     const containerNode = containerRef.current;
     if (!articleNode || !containerNode) {
       return;
     }
 
-    const rawTerm = searchTerm.trim();
+    const rawTerm = debouncedSearchTerm;
     const escapedTerm = rawTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const markerNodes = articleNode.querySelectorAll('mark[data-preview-search]');
     markerNodes.forEach((markerNode) => {
@@ -313,6 +297,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
     if (!rawTerm) {
       setMatches([]);
       setActiveMatchIndex(0);
+      setSearchResultsTruncated(false);
       return;
     }
 
@@ -338,8 +323,14 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
     const regex = new RegExp(escapedTerm, 'gi');
     const nextMatches: SearchMatch[] = [];
     let matchCounter = 0;
+    let resultsTruncated = false;
 
     while (walker.nextNode()) {
+      if (matchCounter >= MAX_SEARCH_MATCHES) {
+        resultsTruncated = true;
+        break;
+      }
+
       const textNode = walker.currentNode as Text;
       const originalText = textNode.textContent || '';
       let lastIndex = 0;
@@ -347,7 +338,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
       const fragment = document.createDocumentFragment();
       let result = regex.exec(originalText);
 
-      while (result) {
+      while (result && matchCounter < MAX_SEARCH_MATCHES) {
         matched = true;
         const matchedText = result[0];
         const beforeText = originalText.slice(lastIndex, result.index);
@@ -373,6 +364,10 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
         result = regex.exec(originalText);
       }
 
+      if (result) {
+        resultsTruncated = true;
+      }
+
       if (!matched) {
         regex.lastIndex = 0;
         continue;
@@ -389,6 +384,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
 
     setMatches(nextMatches);
     setActiveMatchIndex(0);
+    setSearchResultsTruncated(resultsTruncated);
 
     if (nextMatches.length > 0) {
       requestAnimationFrame(() => {
@@ -396,7 +392,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
         firstMatch?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       });
     }
-  }, [html, searchTerm]);
+  }, [html, debouncedSearchTerm]);
 
   useEffect(() => {
     const articleNode = articleRef.current;
@@ -428,6 +424,8 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
       return;
     }
 
+    let frameId: number | null = null;
+
     const updateProgress = () => {
       const totalScrollable = containerNode.scrollHeight - containerNode.clientHeight;
       if (totalScrollable <= 0) {
@@ -439,18 +437,85 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
         100,
         Math.max(0, (containerNode.scrollTop / totalScrollable) * 100)
       );
-      setReadingProgress(nextProgress);
+      setReadingProgress((prevProgress) =>
+        Math.abs(prevProgress - nextProgress) < 0.5 ? prevProgress : nextProgress
+      );
+    };
+
+    const scheduleProgressUpdate = () => {
+      if (frameId !== null) {
+        return;
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        updateProgress();
+      });
     };
 
     updateProgress();
-    containerNode.addEventListener('scroll', updateProgress, { passive: true });
+    containerNode.addEventListener('scroll', scheduleProgressUpdate, { passive: true });
 
     return () => {
-      containerNode.removeEventListener('scroll', updateProgress);
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+      containerNode.removeEventListener('scroll', scheduleProgressUpdate);
     };
   }, [html]);
 
+  useEffect(() => {
+    const tocBodyNode = tocBodyRef.current;
+    if (!tocBodyNode || !activeHeadingId) {
+      return;
+    }
+
+    const activeLink = tocBodyNode.querySelector<HTMLElement>(
+      `.markdown-preview-toc-link.active[href="#${CSS.escape(activeHeadingId)}"]`
+    );
+    if (!activeLink) {
+      return;
+    }
+
+    const now = performance.now();
+    const behavior: ScrollBehavior =
+      now - lastTocSyncAtRef.current > 240 ? 'smooth' : 'auto';
+    lastTocSyncAtRef.current = now;
+
+    activeLink?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior,
+    });
+  }, [activeHeadingId]);
+
+  useEffect(() => {
+    const tocBodyNode = tocBodyRef.current;
+    if (!tocBodyNode || !debouncedSearchTerm || matches.length === 0) {
+      return;
+    }
+
+    const activeMatchItem = tocBodyNode.querySelector<HTMLElement>(
+      `.markdown-preview-search-outline-item.active[data-match-index="${activeMatchIndex}"]`
+    );
+    if (!activeMatchItem) {
+      return;
+    }
+
+    const now = performance.now();
+    const behavior: ScrollBehavior =
+      now - lastMatchSyncAtRef.current > 240 ? 'smooth' : 'auto';
+    lastMatchSyncAtRef.current = now;
+
+    activeMatchItem.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+      behavior,
+    });
+  }, [activeMatchIndex, debouncedSearchTerm, matches]);
+
   const hasSearchResults = matches.length > 0;
+  const hasPendingSearch = searchTerm.trim() !== debouncedSearchTerm;
 
   const handleSearchMove = (direction: 'prev' | 'next') => {
     if (!hasSearchResults) {
@@ -473,17 +538,21 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
       aria-label="Markdown preview"
     >
       <header className="markdown-preview-tools">
-        <div className="markdown-preview-progress-track" aria-hidden="true">
-          <span
-            className="markdown-preview-progress-bar"
-            style={{ width: `${readingProgress}%` }}
-          />
+        <div
+          className="markdown-preview-progress"
+          aria-label={`已阅读 ${Math.round(readingProgress)}%`}
+        >
+          <span className="markdown-preview-progress-text">
+            {Math.round(readingProgress)}%
+          </span>
+          <div className="markdown-preview-progress-track" aria-hidden="true">
+            <span
+              className="markdown-preview-progress-bar"
+              style={{ width: `${readingProgress}%` }}
+            />
+          </div>
         </div>
         <div className="markdown-preview-tools-row">
-          <div className="markdown-preview-tools-copy">
-            <span className="markdown-preview-tools-eyebrow">Reader mode</span>
-            <strong>{Math.round(readingProgress)}% 已阅读</strong>
-          </div>
           <div className="markdown-preview-search">
             <input
               value={searchTerm}
@@ -495,8 +564,12 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
             />
             <span className="markdown-preview-search-status">
               {searchTerm.trim()
-                ? hasSearchResults
-                  ? `${activeMatchIndex + 1}/${matches.length}`
+                ? hasPendingSearch
+                  ? '搜索中'
+                  : hasSearchResults
+                  ? `${activeMatchIndex + 1}/${matches.length}${
+                      searchResultsTruncated ? '+' : ''
+                    }`
                   : '0 结果'
                 : '输入后高亮正文'}
             </span>
@@ -524,40 +597,43 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
           <div className="markdown-preview-toc-card">
             <span className="markdown-preview-toc-eyebrow">On this page</span>
             <h3>目录</h3>
-            <nav className="markdown-preview-toc-nav">
-              {headings.map((heading) => (
-                <a
-                  key={heading.id}
-                  href={`#${heading.id}`}
-                  className={`markdown-preview-toc-link ${
-                    activeHeadingId === heading.id ? 'active' : ''
-                  }`}
-                  data-level={heading.level}
-                >
-                  {heading.text}
-                </a>
-              ))}
-            </nav>
-            {searchTerm.trim() && matches.length > 0 && (
-              <div className="markdown-preview-search-outline">
-                <span className="markdown-preview-search-outline-title">搜索命中</span>
-                <div className="markdown-preview-search-outline-list">
-                  {matches.slice(0, 6).map((match) => (
-                    <button
-                      key={match.index}
-                      type="button"
-                      className={`markdown-preview-search-outline-item ${
-                        activeMatchIndex === match.index ? 'active' : ''
-                      }`}
-                      data-level={match.level || 1}
-                      onClick={() => setActiveMatchIndex(match.index)}
-                    >
-                      {match.label}
-                    </button>
-                  ))}
+            <div ref={tocBodyRef} className="markdown-preview-toc-body">
+              <nav className="markdown-preview-toc-nav">
+                {headings.map((heading) => (
+                  <a
+                    key={heading.id}
+                    href={`#${heading.id}`}
+                    className={`markdown-preview-toc-link ${
+                      activeHeadingId === heading.id ? 'active' : ''
+                    }`}
+                    data-level={heading.level}
+                  >
+                    {heading.text}
+                  </a>
+                ))}
+              </nav>
+              {debouncedSearchTerm && matches.length > 0 && (
+                <div className="markdown-preview-search-outline">
+                  <span className="markdown-preview-search-outline-title">搜索命中</span>
+                  <div className="markdown-preview-search-outline-list">
+                    {matches.map((match) => (
+                      <button
+                        key={match.index}
+                        type="button"
+                        className={`markdown-preview-search-outline-item ${
+                          activeMatchIndex === match.index ? 'active' : ''
+                        }`}
+                        data-match-index={match.index}
+                        data-level={match.level || 1}
+                        onClick={() => setActiveMatchIndex(match.index)}
+                      >
+                        {match.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </aside>
       )}

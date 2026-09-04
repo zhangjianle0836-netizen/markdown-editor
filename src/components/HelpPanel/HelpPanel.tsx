@@ -105,7 +105,7 @@ export function HelpPanel() {
                 </div>
               ))}
               <div className="help-footer">
-                <p>💡 提示：点击语法可以快速复制</p>
+                <p>💡 提示：可直接参考以上示例编写 Markdown</p>
               </div>
             </div>
           </div>

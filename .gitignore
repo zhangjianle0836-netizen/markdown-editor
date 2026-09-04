@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 
 # Build output
@@ -32,6 +31,13 @@ lerna-debug.log*
 .env
 .env.local
 .env.*.local
+
+# Local signing credentials and verification artifacts
+/apple证书/
+/work/
+*.p12
+*.key
+*.certSigningRequest
 
 # Electron
 *.asar
