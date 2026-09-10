@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { PdfExportRequest } from './pdf';
 
 // 暴露安全的 API 给渲染进程
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -6,6 +7,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (filePath: string) => ipcRenderer.invoke('file:read', filePath),
   saveFile: (filePath: string, content: string) =>
     ipcRenderer.invoke('file:save', filePath, content),
+
+  exportPdf: (request: PdfExportRequest) => ipcRenderer.invoke('file:exportPdf', request),
 
   // 对话框
   showOpenDialog: () => ipcRenderer.invoke('dialog:open'),

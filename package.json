@@ -1,6 +1,6 @@
 {
   "name": "md-editor",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A lightweight, modern Markdown editor with live preview",
   "main": "dist-electron/main.js",
   "author": {
@@ -19,6 +19,7 @@
   "scripts": {
     "dev": "vite",
     "test": "tsc -p tsconfig.electron.json && node --test tests/*.test.cjs",
+    "test:integration": "electron tests/electron-integration.cjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "build": "npm run typecheck && tsc -p tsconfig.electron.json && vite build",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",

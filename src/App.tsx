@@ -16,6 +16,8 @@ type CurrentFileUpdater = (currentFile: Tab | null) => Tab | null;
 
 export default function App() {
   const [currentFile, setCurrentFileState] = useState<Tab | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const pdfExportPendingRef = useRef(false);
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
   const currentFileRef = useRef<Tab | null>(null);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -203,6 +205,40 @@ export default function App() {
     }
   }, [saveTab]);
 
+  const handleExportPdf = useCallback(async () => {
+    const file = currentFileRef.current;
+    if (!file || pdfExportPendingRef.current) {
+      return;
+    }
+    if (!window.electronAPI) {
+      showToast('请在桌面应用中导出 PDF', 'info');
+      return;
+    }
+
+    pdfExportPendingRef.current = true;
+    setIsExportingPdf(true);
+    try {
+      const { markdownToHTML } = await import('./utils/markdownRenderer');
+      const result = await window.electronAPI.exportPdf({
+        name: file.name,
+        html: markdownToHTML(file.content),
+      });
+      if (result.canceled) {
+        return;
+      }
+      if (result.success) {
+        showToast('PDF 已导出', 'success');
+      } else {
+        showToast(`导出 PDF 失败：${result.error || '请重试'}`, 'error');
+      }
+    } catch (error) {
+      showToast(`导出 PDF 失败：${error instanceof Error ? error.message : '请重试'}`, 'error');
+    } finally {
+      pdfExportPendingRef.current = false;
+      setIsExportingPdf(false);
+    }
+  }, [showToast]);
+
   const handleNewFile = useCallback(async () => {
     if (!(await canReplaceCurrentFile())) {
       return;
@@ -278,6 +314,8 @@ export default function App() {
         onNewFile={handleNewFile}
         onOpenFile={handleOpenFile}
         onTabSave={handleSave}
+        onExportPdf={handleExportPdf}
+        isExportingPdf={isExportingPdf}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
       />

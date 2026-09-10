@@ -23,6 +23,12 @@ export interface FileSaveResult {
 export interface ElectronAPI {
   readFile: (filePath: string) => Promise<FileReadResult>;
   saveFile: (filePath: string, content: string) => Promise<FileSaveResult>;
+  exportPdf: (request: { name: string; html: string }) => Promise<{
+    success: boolean;
+    canceled?: boolean;
+    filePath?: string;
+    error?: string;
+  }>;
   showOpenDialog: () => Promise<OpenDialogReturnValue>;
   showSaveDialog: () => Promise<SaveDialogReturnValue>;
   showUnsavedChangesDialog: (tabName: string) => Promise<{ response: number }>;

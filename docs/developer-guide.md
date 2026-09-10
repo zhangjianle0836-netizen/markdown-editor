@@ -94,3 +94,7 @@ npm run electron:build
 - 新增或删除主要组件
 
 文档入口在 `docs/README.md`，新增正式文档时需要在该索引中登记。
+
+## Electron 回归验证
+
+先执行 `npm run build`，再依次执行 `npm test` 和 `npm run test:integration`。集成验证使用临时用户目录和测试对话框，检查页内目录跳转后的连续打开、未保存更改保护、PDF 导出与失败恢复；验证 PDF 和截图保存在忽略的 `work/pdf-verification/`。各检查应顺序执行。

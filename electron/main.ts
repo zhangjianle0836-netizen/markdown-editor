@@ -7,6 +7,7 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import * as crypto from 'crypto';
+import { getPdfFileName, isPdfExportRequest, isPdfFilePath, renderPdf, type PdfExportResult } from './pdf';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
@@ -23,6 +24,7 @@ let closeRequestPending = false;
 let forceClose = false;
 let isQuitting = false;
 let isDrainingOpenQueue = false;
+let pdfExportPending = false;
 
 const pendingFilePaths: string[] = [];
 const readablePaths = new Set<string>();
@@ -100,7 +102,7 @@ const configureNavigationProtection = (window: BrowserWindow): void => {
 
 const atomicWriteFile = async (
   filePath: string,
-  content: string
+  content: string | Buffer
 ): Promise<void> => {
   const directory = path.dirname(filePath);
   const filename = path.basename(filePath);
@@ -271,8 +273,11 @@ function createWindow(): void {
     mainWindow?.show();
   });
 
-  mainWindow.webContents.on('did-start-loading', () => {
-    rendererReady = false;
+  mainWindow.webContents.on('did-start-navigation', (details) => {
+    // Heading anchors keep React and its IPC listeners alive.
+    if (details.isMainFrame && !details.isSameDocument) {
+      rendererReady = false;
+    }
   });
 
   mainWindow.on('close', (event) => {
@@ -365,6 +370,41 @@ const registerIpcHandlers = (): void => {
       }
     }
   );
+
+  ipcMain.handle('file:exportPdf', async (event, request: unknown): Promise<PdfExportResult> => {
+    if (!isTrustedIpcSender(event) || !mainWindow) {
+      return { success: false, error: 'Untrusted IPC sender.' };
+    }
+    if (!isPdfExportRequest(request)) {
+      return { success: false, error: '导出内容无效或超过 20MB。' };
+    }
+    if (pdfExportPending) {
+      return { success: false, error: '正在导出 PDF，请稍候。' };
+    }
+
+    pdfExportPending = true;
+    try {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: '导出 PDF',
+        defaultPath: getPdfFileName(request.name),
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      });
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true };
+      }
+      if (!isPdfFilePath(result.filePath)) {
+        return { success: false, error: '请使用 .pdf 文件扩展名。' };
+      }
+
+      const pdf = await renderPdf(request);
+      await atomicWriteFile(result.filePath, pdf);
+      return { success: true, filePath: result.filePath };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    } finally {
+      pdfExportPending = false;
+    }
+  });
 
   ipcMain.handle('dialog:open', async (event) => {
     if (!isTrustedIpcSender(event) || !mainWindow) {

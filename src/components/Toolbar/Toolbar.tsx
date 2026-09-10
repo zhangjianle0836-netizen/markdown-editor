@@ -8,6 +8,8 @@ interface ToolbarProps {
   onNewFile: () => void;
   onOpenFile: () => void;
   onTabSave: () => void;
+  onExportPdf: () => void;
+  isExportingPdf: boolean;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
 }
@@ -17,6 +19,8 @@ export function Toolbar({
   onNewFile,
   onOpenFile,
   onTabSave,
+  onExportPdf,
+  isExportingPdf,
   viewMode,
   onViewModeChange,
 }: ToolbarProps) {
@@ -48,6 +52,15 @@ export function Toolbar({
           disabled={!activeTab || !activeTab.isModified}
         >
           保存
+        </button>
+        <button
+          onClick={onExportPdf}
+          className="toolbar-button"
+          disabled={!activeTab || isExportingPdf}
+          aria-busy={isExportingPdf}
+          title="将当前内容导出为 PDF，包含未保存的更改"
+        >
+          {isExportingPdf ? '正在导出…' : '导出 PDF'}
         </button>
       </div>
       <div className="toolbar-title">

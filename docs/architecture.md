@@ -124,5 +124,6 @@ Toolbar / 快捷键
 
 - 当前是单文件工作区，不提供多标签和文件树。
 - 自动保存未实现。
-- PDF/HTML 导出尚未实现，后续应作为独立工作流引入，避免未使用依赖进入生产包。
+- PDF 导出复用经过 DOMPurify 清洗的 Markdown HTML，经受信任的 `file:exportPdf` IPC 交给主进程；系统保存对话框授权目标路径后，由无脚本、无预加载的隔离窗口调用 Electron `printToPDF`，使用 A4 排版并原子写入。导出限制单任务、20MB HTML 和 30 秒渲染超时，不增加生产依赖。
+- HTML 导出尚未实现。
 - Markdown 预览增强逻辑运行在渲染进程主线程，后续处理超大文档时可考虑 Web Worker 或更结构化的 AST 管线。

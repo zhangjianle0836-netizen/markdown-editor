@@ -30,6 +30,7 @@ MD Editor is a fast, secure, and lightweight desktop Markdown editor built with 
 #### Core Features
 - 📝 **Real-time Preview** - Live rendering with GitHub Flavored Markdown (GFM) support
 - 🎨 **Clean UI** - Minimalist design focused on content creation
+- 📄 **PDF Export** - Export current content, including unsaved edits, as an A4 PDF using the “导出 PDF” toolbar button (desktop app)
 - 💾 **Smart Save** - Unsaved changes protection with visual indicators
 - ⚡ **Fast & Lightweight** - Optimized performance with small bundle size
 
@@ -235,6 +236,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 MD Editor 是一个基于 Electron 和 React 构建的快速、安全、轻量级的桌面 Markdown 编辑器。它提供干净、无干扰的写作体验，支持实时预览和完整的 GitHub 风格 Markdown (GFM) 功能。
 
 **设计理念:** 简单、专注、高效。MD Editor 是一个单文件编辑器，帮助你专注于写作，而不是管理文件。
+
+### 导出 PDF
+
+在桌面应用中打开或新建文档，点击工具栏的“导出 PDF”，选择保存位置即可。导出包含点击时尚未保存的修改，使用 A4 白底排版，支持中文、表格、代码块、任务列表和链接。图片需使用可访问的 HTTP(S) 地址；相对路径图片与当前预览一样，不会自动按 Markdown 文件所在目录解析。导出不会更改源文件或其保存状态。
 
 ### ✨ 特性
 

@@ -66,6 +66,7 @@
 
 /* 工具栏按钮 */
 .toolbar-button {
+  white-space: nowrap;
   min-height: 40px;
   padding: 0 16px;
   border: 1px solid var(--border-primary);
@@ -191,4 +192,9 @@
   .view-mode-buttons {
     flex: 1;
   }
+}
+
+.toolbar-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }

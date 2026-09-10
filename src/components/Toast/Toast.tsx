@@ -12,7 +12,7 @@ export function Toast({ toasts, onRemove }: ToastProps) {
   return (
     <div className="toast-container">
       {toasts.map((toast) => (
-        <div key={toast.id} className={`toast toast-${toast.type}`}>
+        <div key={toast.id} className={`toast toast-${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>
           <span className="toast-message">{toast.message}</span>
           <button className="toast-close" onClick={() => onRemove(toast.id)}>
             ×
