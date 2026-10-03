@@ -21,6 +21,7 @@ export default function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
   const currentFileRef = useRef<Tab | null>(null);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const documentOperationRef = useRef(0);
   const { toasts, showToast, removeToast } = useToast();
 
   const updateCurrentFile = useCallback((updater: CurrentFileUpdater): Tab | null => {
@@ -42,7 +43,8 @@ export default function App() {
         }
 
         try {
-          let targetPath = tab.path;
+          const latestFile = currentFileRef.current;
+          let targetPath = tab.path || (latestFile?.id === tab.id ? latestFile.path : '');
           if (!targetPath) {
             const dialogResult = await window.electronAPI.showSaveDialog();
             if (dialogResult.canceled || !dialogResult.filePath) {
@@ -74,7 +76,7 @@ export default function App() {
             };
           });
           const savedLatestRevision =
-            updatedFile?.id !== tab.id || updatedFile.revision === savedRevision;
+            updatedFile?.id === tab.id && updatedFile.revision === savedRevision;
 
           showToast(
             savedLatestRevision ? '文件保存成功' : '此前内容已保存，仍有新的未保存更改',
@@ -98,13 +100,18 @@ export default function App() {
     [showToast, updateCurrentFile]
   );
 
-  const canReplaceCurrentFile = useCallback(async (): Promise<boolean> => {
+  const canReplaceCurrentFile = useCallback(async (operation: number): Promise<boolean> => {
     const file = currentFileRef.current;
     if (!file || !file.isModified) {
       return true;
     }
 
     const action = await getUnsavedChangesAction(file.name, file.isModified);
+    const current = currentFileRef.current;
+    if (operation !== documentOperationRef.current || current?.id !== file.id ||
+        current.revision !== file.revision) {
+      return false;
+    }
     if (action === 'cancel') {
       return false;
     }
@@ -112,7 +119,7 @@ export default function App() {
       return true;
     }
 
-    return saveTab(file);
+    return await saveTab(file) && operation === documentOperationRef.current;
   }, [saveTab]);
 
   const handleFileOpen = useCallback(
@@ -125,7 +132,8 @@ export default function App() {
 
   const openFileFromSystem = useCallback(
     async (data: { path: string; name: string; content: string }) => {
-      if (!(await canReplaceCurrentFile())) {
+      const operation = ++documentOperationRef.current;
+      if (!(await canReplaceCurrentFile(operation)) || operation !== documentOperationRef.current) {
         return;
       }
 
@@ -164,21 +172,64 @@ export default function App() {
       openFileFromSystemRef.current(data)
     );
     const unsubscribeClose = window.electronAPI.onCloseRequested(async () => {
+      const operation = ++documentOperationRef.current;
       try {
-        const shouldClose = await canReplaceCurrentFileRef.current();
+        let shouldClose = await canReplaceCurrentFileRef.current(operation) &&
+          operation === documentOperationRef.current;
+        if (shouldClose) {
+          const closingFile = currentFileRef.current;
+          await window.electronAPI.updateRecoveryDraft(null);
+          const current = currentFileRef.current;
+          shouldClose = operation === documentOperationRef.current &&
+            current?.id === closingFile?.id && current?.revision === closingFile?.revision;
+        }
         await window.electronAPI.respondToCloseRequest(shouldClose);
       } catch {
         await window.electronAPI.respondToCloseRequest(false);
       }
     });
 
-    void window.electronAPI.notifyRendererReady();
+    let active = true;
+    const startupOperation = documentOperationRef.current;
+    void (async () => {
+      try {
+        const draft = await window.electronAPI.getRecoveryDraft();
+        if (active && draft && documentOperationRef.current === startupOperation) {
+          updateCurrentFile(() => ({
+            id: generateId(), path: '', name: draft.name, content: draft.content,
+            isModified: true, revision: 0,
+          }));
+          setViewMode('edit');
+          showToast('已恢复未保存的草稿，请选择保存位置', 'info');
+        }
+      } catch (error) {
+        console.error('Failed to recover draft:', error);
+      } finally {
+        if (active) await window.electronAPI.notifyRendererReady();
+      }
+    })();
 
     return () => {
+      active = false;
       unsubscribeOpen();
       unsubscribeClose();
     };
-  }, []);
+  }, [showToast, updateCurrentFile]);
+
+  useEffect(() => {
+    if (!window.electronAPI || !currentFile) return;
+    const persistDraft = () => {
+      void window.electronAPI.updateRecoveryDraft(currentFile.isModified ? {
+        name: currentFile.name, content: currentFile.content,
+      } : null).catch((error) => console.error('Failed to back up draft:', error));
+    };
+    if (!currentFile.isModified) {
+      persistDraft();
+      return;
+    }
+    const timeout = window.setTimeout(persistDraft, 750);
+    return () => window.clearTimeout(timeout);
+  }, [currentFile]);
 
   const handleContentChange = useCallback(
     (content: string) => {
@@ -240,7 +291,8 @@ export default function App() {
   }, [showToast]);
 
   const handleNewFile = useCallback(async () => {
-    if (!(await canReplaceCurrentFile())) {
+    const operation = ++documentOperationRef.current;
+    if (!(await canReplaceCurrentFile(operation)) || operation !== documentOperationRef.current) {
       return;
     }
 
@@ -266,9 +318,11 @@ export default function App() {
       return;
     }
 
-    if (!(await canReplaceCurrentFile())) {
+    const operation = ++documentOperationRef.current;
+    if (!(await canReplaceCurrentFile(operation)) || operation !== documentOperationRef.current) {
       return;
     }
+    const authorizedFile = currentFileRef.current;
 
     try {
       const result = await window.electronAPI.showOpenDialog();
@@ -278,10 +332,18 @@ export default function App() {
 
       const filePath = result.filePaths[0];
       const fileResult = await window.electronAPI.readFile(filePath);
+      if (operation !== documentOperationRef.current) return;
       if (!fileResult.success) {
         showToast(`打开文件失败：${fileResult.error}`, 'error');
         return;
       }
+
+      const current = currentFileRef.current;
+      if ((current?.id !== authorizedFile?.id || current?.revision !== authorizedFile?.revision) &&
+          !(await canReplaceCurrentFile(operation))) {
+        return;
+      }
+      if (operation !== documentOperationRef.current) return;
 
       handleFileOpen(
         {

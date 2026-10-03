@@ -14,7 +14,7 @@ export function Toast({ toasts, onRemove }: ToastProps) {
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast toast-${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>
           <span className="toast-message">{toast.message}</span>
-          <button className="toast-close" onClick={() => onRemove(toast.id)}>
+          <button className="toast-close" aria-label="关闭通知" onClick={() => onRemove(toast.id)}>
             ×
           </button>
         </div>

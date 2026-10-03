@@ -7,7 +7,7 @@ MD Editor 是一个 Electron + React + TypeScript 桌面应用，当前核心形
 - Electron 44：桌面壳、窗口生命周期、原生文件对话框和文件关联
 - React 18：渲染进程 UI
 - TypeScript：主进程和渲染进程类型约束
-- Vite：前端构建和代码分割
+- Vite 7：前端构建和代码分割
 - marked + DOMPurify：Markdown 解析和 HTML 清洗
 - @uiw/react-md-editor：编辑/分屏模式下按需加载的编辑器
 
@@ -32,7 +32,7 @@ md-editor/
 │   └── utils/               # Markdown 渲染、导出、路径、对话框
 ├── docs/                    # 用户和开发文档
 ├── build/                   # 打包资源
-└── vite.config.ts           # Vite 构建配置
+└── vite.config.mts           # Vite 构建配置
 ```
 
 ## 运行时架构
@@ -62,6 +62,7 @@ md-editor/
 - 保存、新建、打开和系统文件打开流程
 - 未保存更改处理：保存、丢弃或取消，包括关闭窗口和退出应用
 - 通过内容 revision 避免异步保存把新内容错误标记为已保存
+- 用操作序号和打开前后 revision 校验拒绝过期读取，关闭时再次检查异步清理期间的编辑
 
 `Toolbar` 只负责触发 App 下发的动作和切换视图，不直接读写文件。
 
@@ -69,9 +70,9 @@ md-editor/
 
 `MarkdownPreview` 负责：
 
-- 动态加载 `markdownRenderer`
+- 通过 `useRenderedMarkdown` 与分屏共享延迟加载、DOMPurify 清洗和预览增强逻辑
 - 提取标题目录
-- 为标题添加锚点
+- 为标题添加全局唯一锚点
 - 包装代码块并做轻量高亮
 - 正文搜索、高亮命中和命中导航
 - 阅读进度计算
@@ -106,24 +107,27 @@ Toolbar / 快捷键
   -> App.saveTab()
   -> 有路径：electronAPI.saveFile(path, content)
   -> 无路径：electronAPI.showSaveDialog() 后保存
-  -> main.ts 校验路径授权和内容大小后原子写入 UTF-8
+  -> main.ts 校验路径授权、内容大小和磁盘版本，遇到外部修改时先确认
+  -> files.ts 在同目录原子写入，保留文件权限和编辑文档的符号链接
   -> App 仅在 revision 未变化时标记 isModified = false
 ```
 
 ## 构建策略
 
-`vite.config.ts` 使用手动分包：
+`vite.config.mts` 使用手动分包：
 
 - `react-vendor`
 - `editor-vendor`
 - `markdown-vendor`
 
-编辑器和 Markdown 解析依赖不是预览首屏的必要资源，应继续保持按需加载。
+编辑器和 Markdown 解析依赖按需加载。`scripts/check-bundle.cjs` 追踪静态依赖图，防止编辑器泄漏到启动入口。前端依赖属于开发依赖，构建结果已包含运行时资源；打包不重复携带 node_modules。应用界面为中文，Electron 只保留中文与英文语言资源。
+
+`npm run verify` 在同一个进程锁下依次执行单元测试、类型检查、构建和两个隔离 Electron 集成测试，工作线程最多为 2。开发模式等待主进程编译成功，再启动或重启开发实例。
 
 ## 当前边界
 
 - 当前是单文件工作区，不提供多标签和文件树。
-- 自动保存未实现。
+- 草稿在停止编辑约 750ms 后备份到本地应用数据目录，异常退出后可恢复；不自动写回原文件。恢复后需要重新选择保存位置。
 - PDF 导出复用经过 DOMPurify 清洗的 Markdown HTML，经受信任的 `file:exportPdf` IPC 交给主进程；系统保存对话框授权目标路径后，由无脚本、无预加载的隔离窗口调用 Electron `printToPDF`，使用 A4 排版并原子写入。导出限制单任务、20MB HTML 和 30 秒渲染超时，不增加生产依赖。
 - HTML 导出尚未实现。
 - Markdown 预览增强逻辑运行在渲染进程主线程，后续处理超大文档时可考虑 Web Worker 或更结构化的 AST 管线。

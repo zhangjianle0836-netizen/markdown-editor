@@ -1,8 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './HelpPanel.css';
 
 export function HelpPanel() {
   const [isVisible, setIsVisible] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isVisible && !dialog.open) dialog.showModal();
+    if (!isVisible && dialog.open) dialog.close();
+  }, [isVisible]);
 
   const syntaxList = [
     {
@@ -70,21 +77,27 @@ export function HelpPanel() {
         className="help-button"
         onClick={() => setIsVisible(!isVisible)}
         title="Markdown 语法帮助"
+        aria-label="Markdown 语法帮助"
+        aria-haspopup="dialog"
+        aria-expanded={isVisible}
       >
         ?
       </button>
 
-      {isVisible && (
-        <>
-          <div
-            className="help-backdrop"
-            onClick={() => setIsVisible(false)}
-          />
-          <div className="help-panel">
+      <dialog ref={dialogRef} className="help-panel" aria-labelledby="markdown-help-title"
+        onClose={() => setIsVisible(false)}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (event.clientX < bounds.left || event.clientX > bounds.right ||
+              event.clientY < bounds.top || event.clientY > bounds.bottom) setIsVisible(false);
+        }}>
             <div className="help-header">
-              <h3>Markdown 语法帮助</h3>
+              <h3 id="markdown-help-title">Markdown 语法帮助</h3>
               <button
                 className="help-close"
+                aria-label="关闭语法帮助"
+                autoFocus
                 onClick={() => setIsVisible(false)}
               >
                 ×
@@ -108,9 +121,7 @@ export function HelpPanel() {
                 <p>💡 提示：可直接参考以上示例编写 Markdown</p>
               </div>
             </div>
-          </div>
-        </>
-      )}
+      </dialog>
     </div>
   );
 }

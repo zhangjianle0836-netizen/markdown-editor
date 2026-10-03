@@ -1,21 +1,13 @@
 import {
   memo,
-  useDeferredValue,
   useEffect,
   useRef,
   useState,
 } from 'react';
+import { useRenderedMarkdown } from '../../hooks/useRenderedMarkdown';
 
 interface MarkdownPreviewProps {
   content: string;
-}
-
-type MarkdownConverter = (markdown: string) => string;
-
-interface HeadingItem {
-  id: string;
-  level: number;
-  text: string;
 }
 
 interface SearchMatch {
@@ -26,172 +18,13 @@ interface SearchMatch {
 
 const MAX_SEARCH_MATCHES = 500;
 
-let converter: MarkdownConverter | null = null;
-let converterLoadingPromise: Promise<MarkdownConverter> | null = null;
-
-const loadConverter = async (): Promise<MarkdownConverter> => {
-  if (converter) {
-    return converter;
-  }
-
-  if (!converterLoadingPromise) {
-    converterLoadingPromise = import('../../utils/markdownRenderer').then((module) => {
-      converter = module.markdownToHTML;
-      return converter;
-    });
-  }
-
-  return converterLoadingPromise;
-};
-
-const slugify = (value: string): string => {
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[`*_~[\]()#+.!?]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\u4e00-\u9fa5-]/g, '');
-
-  return normalized || 'section';
-};
-
-const getCodeLanguage = (codeElement: Element | null): string => {
-  if (!codeElement) {
-    return 'text';
-  }
-
-  const languageClass = Array.from(codeElement.classList).find((className) =>
-    className.startsWith('language-')
-  );
-
-  return languageClass ? languageClass.replace('language-', '') : 'text';
-};
-
-const escapeHtml = (value: string): string => {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-};
-
-const highlightCode = (source: string, language: string): string => {
-  const placeholders: string[] = [];
-  const storeToken = (html: string): string => {
-    const marker = `@@TOKEN_${placeholders.length}@@`;
-    placeholders.push(html);
-    return marker;
-  };
-
-  let html = escapeHtml(source);
-  const lang = language.toLowerCase();
-
-  if (['js', 'jsx', 'ts', 'tsx', 'json'].includes(lang)) {
-    html = html.replace(/(\/\/.*$|\/\*[\s\S]*?\*\/)/gm, (match) =>
-      storeToken(`<span class="markdown-token-comment">${match}</span>`)
-    );
-    html = html.replace(/("(?:\\.|[^"])*"|'(?:\\.|[^'])*'|`(?:\\.|[^`])*`)/g, (match) =>
-      storeToken(`<span class="markdown-token-string">${match}</span>`)
-    );
-    html = html.replace(/\b(const|let|var|function|return|if|else|for|while|switch|case|break|import|from|export|default|class|extends|new|await|async|try|catch|throw|typeof|interface|type|implements)\b/g, '<span class="markdown-token-keyword">$1</span>');
-    html = html.replace(/\b(true|false|null|undefined)\b/g, '<span class="markdown-token-literal">$1</span>');
-    html = html.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="markdown-token-number">$1</span>');
-  } else if (['html', 'xml', 'svg'].includes(lang)) {
-    html = html.replace(/(&lt;\/?)([\w-]+)(.*?)(\/?&gt;)/g, (_match, open, tag, attrs, close) => {
-      const highlightedAttrs = attrs.replace(/([\w:-]+)=(".*?"|'.*?')/g, '<span class="markdown-token-attr">$1</span>=<span class="markdown-token-string">$2</span>');
-      return `${open}<span class="markdown-token-tag">${tag}</span>${highlightedAttrs}${close}`;
-    });
-  } else if (['css', 'scss', 'less'].includes(lang)) {
-    html = html.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="markdown-token-comment">$1</span>');
-    html = html.replace(/([.#]?[\w-]+)(\s*\{)/g, '<span class="markdown-token-tag">$1</span>$2');
-    html = html.replace(/([\w-]+)(:\s*)([^;]+)(;?)/g, '<span class="markdown-token-attr">$1</span>$2<span class="markdown-token-string">$3</span>$4');
-  } else if (['bash', 'sh', 'zsh', 'shell'].includes(lang)) {
-    html = html.replace(/(#.*$)/gm, '<span class="markdown-token-comment">$1</span>');
-    html = html.replace(/("(?:\\.|[^"])*"|'(?:\\.|[^'])*')/g, '<span class="markdown-token-string">$1</span>');
-    html = html.replace(/\b(if|then|else|fi|for|do|done|echo|export|cd|npm|pnpm|git|node)\b/g, '<span class="markdown-token-keyword">$1</span>');
-    html = html.replace(/(\$\w+)/g, '<span class="markdown-token-literal">$1</span>');
-  } else if (lang === 'md' || lang === 'markdown') {
-    html = html.replace(/^(#{1,6}\s.*)$/gm, '<span class="markdown-token-keyword">$1</span>');
-    html = html.replace(/(```[\s\S]*?```|`[^`]+`)/g, '<span class="markdown-token-string">$1</span>');
-    html = html.replace(/(\*\*.*?\*\*|\*.*?\*)/g, '<span class="markdown-token-literal">$1</span>');
-    html = html.replace(/(\[.*?\]\(.*?\))/g, '<span class="markdown-token-tag">$1</span>');
-  }
-
-  return html.replace(/@@TOKEN_(\d+)@@/g, (_match, index) => placeholders[Number(index)] || '');
-};
-
-const buildEnhancedHtml = (
-  rawHtml: string
-): { html: string; headings: HeadingItem[] } => {
-  const parser = new DOMParser();
-  const documentNode = parser.parseFromString(rawHtml, 'text/html');
-  const headingNodes = documentNode.body.querySelectorAll('h1, h2, h3, h4, h5, h6');
-  const headings: HeadingItem[] = [];
-  const slugCount = new Map<string, number>();
-
-  headingNodes.forEach((headingNode) => {
-    const text = headingNode.textContent?.trim() || '未命名章节';
-    const level = Number(headingNode.tagName.slice(1));
-    const baseSlug = slugify(text);
-    const currentCount = slugCount.get(baseSlug) || 0;
-    const id = currentCount > 0 ? `${baseSlug}-${currentCount + 1}` : baseSlug;
-    slugCount.set(baseSlug, currentCount + 1);
-    const heading = { id, level, text };
-    headings.push(heading);
-
-    headingNode.id = heading.id;
-    headingNode.classList.add('markdown-heading');
-
-    const anchor = documentNode.createElement('a');
-    anchor.href = `#${heading.id}`;
-    anchor.className = 'markdown-heading-anchor';
-    anchor.setAttribute('aria-label', `跳转到 ${heading.text}`);
-    anchor.textContent = '#';
-    headingNode.appendChild(anchor);
-  });
-
-  const preNodes = documentNode.body.querySelectorAll('pre');
-  preNodes.forEach((preNode) => {
-    const codeNode = preNode.querySelector('code');
-    const language = getCodeLanguage(codeNode);
-
-    const wrapper = documentNode.createElement('section');
-    wrapper.className = 'markdown-code-block';
-
-    const header = documentNode.createElement('header');
-    header.className = 'markdown-code-header';
-
-    const dots = documentNode.createElement('div');
-    dots.className = 'markdown-code-dots';
-    dots.innerHTML = '<span></span><span></span><span></span>';
-
-    const label = documentNode.createElement('span');
-    label.className = 'markdown-code-label';
-    label.textContent = language;
-
-    if (codeNode) {
-      codeNode.innerHTML = highlightCode(codeNode.textContent || '', language);
-    }
-
-    header.appendChild(dots);
-    header.appendChild(label);
-
-    preNode.parentNode?.insertBefore(wrapper, preNode);
-    wrapper.appendChild(header);
-    wrapper.appendChild(preNode);
-  });
-
-  return { html: documentNode.body.innerHTML, headings };
-};
-
 function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
-  const deferredContent = useDeferredValue(content);
+  const { html, headings, error, retry } = useRenderedMarkdown(content);
   const containerRef = useRef<HTMLElement | null>(null);
   const articleRef = useRef<HTMLElement | null>(null);
   const tocBodyRef = useRef<HTMLDivElement | null>(null);
   const lastTocSyncAtRef = useRef(0);
   const lastMatchSyncAtRef = useRef(0);
-  const [html, setHtml] = useState('<p></p>');
-  const [headings, setHeadings] = useState<HeadingItem[]>([]);
   const [activeHeadingId, setActiveHeadingId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -199,26 +32,6 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
   const [matches, setMatches] = useState<SearchMatch[]>([]);
   const [searchResultsTruncated, setSearchResultsTruncated] = useState(false);
   const [readingProgress, setReadingProgress] = useState(0);
-
-  useEffect(() => {
-    let isActive = true;
-
-    const renderMarkdown = async () => {
-      const markdownToHTML = await loadConverter();
-      const rendered = buildEnhancedHtml(markdownToHTML(deferredContent));
-
-      if (isActive) {
-        setHeadings(rendered.headings);
-        setHtml(rendered.html);
-      }
-    };
-
-    void renderMarkdown();
-
-    return () => {
-      isActive = false;
-    };
-  }, [deferredContent]);
 
   useEffect(() => {
     const articleNode = articleRef.current;
@@ -325,13 +138,20 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
     let matchCounter = 0;
     let resultsTruncated = false;
 
-    while (walker.nextNode()) {
+    // Complete traversal before replacing nodes, so the walker stays attached.
+    const textNodes: Text[] = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+
+    for (const textNode of textNodes) {
       if (matchCounter >= MAX_SEARCH_MATCHES) {
-        resultsTruncated = true;
-        break;
+        regex.lastIndex = 0;
+        if (regex.test(textNode.textContent || '')) {
+          resultsTruncated = true;
+          break;
+        }
+        continue;
       }
 
-      const textNode = walker.currentNode as Text;
       const originalText = textNode.textContent || '';
       let lastIndex = 0;
       let matched = false;
@@ -389,7 +209,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
     if (nextMatches.length > 0) {
       requestAnimationFrame(() => {
         const firstMatch = articleNode.querySelector<HTMLElement>('mark[data-match-index="0"]');
-        firstMatch?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        firstMatch?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
       });
     }
   }, [html, debouncedSearchTerm]);
@@ -414,7 +234,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
     const activeMatchNode = articleNode.querySelector<HTMLElement>(
       `mark[data-match-index="${activeMatchIndex}"]`
     );
-    activeMatchNode?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    activeMatchNode?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [activeMatchIndex, matches]);
 
   useEffect(() => {
@@ -479,7 +299,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
 
     const now = performance.now();
     const behavior: ScrollBehavior =
-      now - lastTocSyncAtRef.current > 240 ? 'smooth' : 'auto';
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches && now - lastTocSyncAtRef.current > 240 ? 'smooth' : 'auto';
     lastTocSyncAtRef.current = now;
 
     activeLink?.scrollIntoView({
@@ -504,7 +324,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
 
     const now = performance.now();
     const behavior: ScrollBehavior =
-      now - lastMatchSyncAtRef.current > 240 ? 'smooth' : 'auto';
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches && now - lastMatchSyncAtRef.current > 240 ? 'smooth' : 'auto';
     lastMatchSyncAtRef.current = now;
 
     activeMatchItem.scrollIntoView({
@@ -534,8 +354,8 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
   return (
     <section
       ref={containerRef}
-      className="markdown-preview"
-      aria-label="Markdown preview"
+      className={`markdown-preview ${headings.length >= 3 ? 'has-toc' : ''}`}
+      aria-label="Markdown 预览"
     >
       <header className="markdown-preview-tools">
         <div
@@ -562,7 +382,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
               placeholder="搜索正文内容"
               aria-label="搜索正文内容"
             />
-            <span className="markdown-preview-search-status">
+            <span className="markdown-preview-search-status" role="status" aria-live="polite">
               {searchTerm.trim()
                 ? hasPendingSearch
                   ? '搜索中'
@@ -606,6 +426,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
                     className={`markdown-preview-toc-link ${
                       activeHeadingId === heading.id ? 'active' : ''
                     }`}
+                    aria-current={activeHeadingId === heading.id ? 'location' : undefined}
                     data-level={heading.level}
                   >
                     {heading.text}
@@ -637,6 +458,7 @@ function MarkdownPreviewComponent({ content }: MarkdownPreviewProps) {
           </div>
         </aside>
       )}
+      {error && <div role="alert">预览加载失败 <button onClick={retry}>重试</button></div>}
       <article
         ref={articleRef}
         className="markdown-preview-content"

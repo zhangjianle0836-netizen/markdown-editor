@@ -13,12 +13,22 @@
 - 签名证书 SHA-1：`CD373C62B31F0607473508C41897980715CDF043`
 - macOS 构建输出目录：`release/`
 - macOS 分发产物按架构生成：
-  - `release/MDEditor-1.0.1-arm64.dmg`
-  - `release/MDEditor-1.0.1-arm64-mac.zip`
+  - `release/MDEditor-1.1.1-arm64.dmg`
+  - `release/MDEditor-1.1.1-arm64-mac.zip`
   - `release/mac-arm64/MDEditor.app`
-  - `release/MDEditor-1.0.1.dmg` 或 `release/MDEditor-1.0.1-x64.dmg`
-  - `release/MDEditor-1.0.1-mac.zip` 或 `release/MDEditor-1.0.1-x64-mac.zip`
+  - `release/MDEditor-1.1.1.dmg` 或 `release/MDEditor-1.1.1-x64.dmg`
+  - `release/MDEditor-1.1.1-mac.zip` 或 `release/MDEditor-1.1.1-x64-mac.zip`
   - `release/mac/MDEditor.app` 或 `release/mac-x64/MDEditor.app`
+
+## 1.1.1 验证与本地更新
+
+1. 运行 `npm run verify`，确认单元测试、构建、惰性加载检查和 Electron 集成测试全部通过。
+2. 验证后使用 `CSC_NAME='Fupu Technology (Beijing) Co., Ltd. (4M8PLCQCFP)' npm run electron:package:mac:arm64`，复用已验证的构建，避免重复编译。
+3. 对新应用执行 `codesign --verify --deep --strict`，验证版本及签名身份。
+4. 正常退出已安装应用，先保留旧版应用备份，再替换 `/Applications/MDEditor.app`。不要删除 `~/Library/Application Support/md-editor` 用户数据，不要强制终止有未保存内容的应用。
+5. 打开新版本，检查窗口、文件打开和预览。签名验证与 Apple 公证是不同步骤；未配置公证凭据时不能声称已公证。
+
+前端依赖均为开发依赖，Electron 主进程只依赖内置模块，应用包不应再次携带整套前端 node_modules。验证与打包通过同一任务锁串行运行。
 
 ## 打包前检查
 
@@ -37,7 +47,7 @@
 cd /Volumes/jianle/code/markdown-editor
 ```
 
-确认依赖已安装：
+使用 Node.js 22.12+。先检查同仓库是否已有构建或测试进程；不要并发执行重型任务。确认依赖已安装：
 
 ```bash
 npm install
@@ -180,8 +190,8 @@ CSC_NAME='Fupu Technology (Beijing) Co., Ltd. (4M8PLCQCFP)' \
 
 ```text
 release/mac-arm64/MDEditor.app
-release/MDEditor-1.0.1-arm64.dmg
-release/MDEditor-1.0.1-arm64-mac.zip
+release/MDEditor-1.1.1-arm64.dmg
+release/MDEditor-1.1.1-arm64-mac.zip
 ```
 
 ### Intel x64 打包
@@ -198,10 +208,10 @@ CSC_NAME='Fupu Technology (Beijing) Co., Ltd. (4M8PLCQCFP)' \
 ```text
 release/mac/MDEditor.app
 release/mac-x64/MDEditor.app
-release/MDEditor-1.0.1.dmg
-release/MDEditor-1.0.1-mac.zip
-release/MDEditor-1.0.1-x64.dmg
-release/MDEditor-1.0.1-x64-mac.zip
+release/MDEditor-1.1.1.dmg
+release/MDEditor-1.1.1-mac.zip
+release/MDEditor-1.1.1-x64.dmg
+release/MDEditor-1.1.1-x64-mac.zip
 ```
 
 实际文件名以 electron-builder 输出为准。
@@ -230,7 +240,7 @@ arm64 示例：
   --keychain /Users/zhangjianle/Library/Keychains/login.keychain-db \
   --timestamp \
   --verbose=4 \
-  release/MDEditor-1.0.1-arm64.dmg
+  release/MDEditor-1.1.1-arm64.dmg
 ```
 
 x64 或 universal 时，把最后一行替换成实际生成的 DMG 文件名，例如：
@@ -258,8 +268,8 @@ release/mac-x64/MDEditor.app
 验证 DMG 文件签名：
 
 ```bash
-/usr/bin/codesign --verify --verbose=4 release/MDEditor-1.0.1-arm64.dmg
-/usr/bin/codesign --display --verbose=4 release/MDEditor-1.0.1-arm64.dmg
+/usr/bin/codesign --verify --verbose=4 release/MDEditor-1.1.1-arm64.dmg
+/usr/bin/codesign --display --verbose=4 release/MDEditor-1.1.1-arm64.dmg
 ```
 
 验证架构：
@@ -280,7 +290,7 @@ lipo -archs release/mac/MDEditor.app/Contents/MacOS/MDEditor
 ```bash
 rm -rf work/verify-zip
 mkdir -p work/verify-zip
-ditto -x -k release/MDEditor-1.0.1-arm64-mac.zip work/verify-zip
+ditto -x -k release/MDEditor-1.1.1-arm64-mac.zip work/verify-zip
 
 /usr/bin/codesign --display --verbose=4 work/verify-zip/MDEditor.app
 /usr/bin/codesign --verify --deep --strict --verbose=4 work/verify-zip/MDEditor.app
@@ -289,20 +299,20 @@ ditto -x -k release/MDEditor-1.0.1-arm64-mac.zip work/verify-zip
 验证 DMG 内的 app：
 
 ```bash
-hdiutil attach -nobrowse -readonly release/MDEditor-1.0.1-arm64.dmg
+hdiutil attach -nobrowse -readonly release/MDEditor-1.1.1-arm64.dmg
 
-/usr/bin/codesign --display --verbose=4 '/Volumes/MDEditor 1.0.1-arm64/MDEditor.app'
-/usr/bin/codesign --verify --deep --strict --verbose=4 '/Volumes/MDEditor 1.0.1-arm64/MDEditor.app'
+/usr/bin/codesign --display --verbose=4 '/Volumes/MDEditor 1.1.1-arm64/MDEditor.app'
+/usr/bin/codesign --verify --deep --strict --verbose=4 '/Volumes/MDEditor 1.1.1-arm64/MDEditor.app'
 
-hdiutil detach '/Volumes/MDEditor 1.0.1-arm64'
+hdiutil detach '/Volumes/MDEditor 1.1.1-arm64'
 ```
 
 生成校验值：
 
 ```bash
 shasum -a 256 \
-  release/MDEditor-1.0.1-arm64.dmg \
-  release/MDEditor-1.0.1-arm64-mac.zip
+  release/MDEditor-1.1.1-arm64.dmg \
+  release/MDEditor-1.1.1-arm64-mac.zip
 ```
 
 ## Gatekeeper 结果说明
@@ -311,7 +321,7 @@ shasum -a 256 \
 
 ```bash
 /usr/sbin/spctl --assess --type execute --verbose=4 release/mac-arm64/MDEditor.app
-/usr/sbin/spctl --assess --type open --context context:primary-signature --verbose=4 release/MDEditor-1.0.1-arm64.dmg
+/usr/sbin/spctl --assess --type open --context context:primary-signature --verbose=4 release/MDEditor-1.1.1-arm64.dmg
 ```
 
 如果结果是：
@@ -404,7 +414,7 @@ exports.default = async function notarizing(context) {
 
 ```bash
 /usr/sbin/spctl --assess --type execute --verbose=4 release/mac-arm64/MDEditor.app
-/usr/sbin/spctl --assess --type open --context context:primary-signature --verbose=4 release/MDEditor-1.0.1-arm64.dmg
+/usr/sbin/spctl --assess --type open --context context:primary-signature --verbose=4 release/MDEditor-1.1.1-arm64.dmg
 ```
 
 通过时不应再显示 `source=Unnotarized Developer ID`。
@@ -479,10 +489,10 @@ CSC_NAME='Fupu Technology (Beijing) Co., Ltd. (4M8PLCQCFP)' \
   --keychain /Users/zhangjianle/Library/Keychains/login.keychain-db \
   --timestamp \
   --verbose=4 \
-  release/MDEditor-1.0.1-arm64.dmg
+  release/MDEditor-1.1.1-arm64.dmg
 
 /usr/bin/codesign --verify --deep --strict --verbose=4 release/mac-arm64/MDEditor.app
-/usr/bin/codesign --verify --verbose=4 release/MDEditor-1.0.1-arm64.dmg
+/usr/bin/codesign --verify --verbose=4 release/MDEditor-1.1.1-arm64.dmg
 ```
 
 ## 参考资源

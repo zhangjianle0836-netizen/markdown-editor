@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import { fileURLToPath } from 'url';
 
 export default defineConfig({
   plugins: [react()],
@@ -10,18 +10,19 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'editor-vendor': ['@uiw/react-md-editor'],
-          'markdown-vendor': ['marked', 'dompurify'],
+        manualChunks(id) {
+          if (id.includes('commonjsHelpers') ||
+              /\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react-vendor';
+          if (/\/node_modules\/(marked|dompurify)\//.test(id)) return 'markdown-vendor';
+          if (id.includes('/node_modules/')) return 'editor-vendor';
         },
       },
     },
     chunkSizeWarningLimit: 1000,
     minify: 'terser',
     terserOptions: {
+      maxWorkers: 2,
       compress: {
-        drop_console: true,
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.info'],
       },
@@ -30,11 +31,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
   server: {
     port: 3000,
+    strictPort: true,
   },
   optimizeDeps: {
     include: ['@uiw/react-md-editor', 'marked', 'dompurify'],

@@ -11,9 +11,10 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      max-parallel: 2
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        node-version: [16.x, 18.x, 20.x]
+        node-version: [22.x, 24.x]
 
     steps:
     - name: Checkout repository
@@ -28,12 +29,15 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Build application
-      run: npm run build
+    - name: Verify application (Linux)
+      if: runner.os == 'Linux'
+      run: xvfb-run -a npm run verify
+      env:
+        ELECTRON_DISABLE_SANDBOX: '1'
 
-    - name: Run linting (if available)
-      run: npm run lint
-      continue-on-error: true
+    - name: Verify application (macOS / Windows)
+      if: runner.os != 'Linux'
+      run: npm run verify
 
   release:
     needs: build
@@ -47,7 +51,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 22.x
         cache: 'npm'
 
     - name: Install dependencies
@@ -56,7 +60,7 @@ jobs:
     - name: Build Electron app
       run: npm run electron:build
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

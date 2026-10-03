@@ -16,6 +16,33 @@ let openResult = { canceled: true, filePaths: [] };
 let unsavedResponse = 2;
 let saveDialogCount = 0;
 let unsavedDialogCount = 0;
+const initialRequests = [];
+app.on('web-contents-created', (_event, contents) => {
+  contents.session.webRequest.onBeforeRequest((details, callback) => {
+    initialRequests.push(details.url);
+    callback({});
+  });
+});
+const originalReadFile = fs.promises.readFile.bind(fs.promises);
+let readGate;
+let readStarted = false;
+let unlinkGate;
+let unlinkStarted = false;
+const originalUnlink = fs.promises.unlink.bind(fs.promises);
+fs.promises.unlink = async file => {
+  if (unlinkGate && file === path.join(profile, 'recovery-draft.json')) {
+    unlinkStarted = true;
+    await unlinkGate;
+  }
+  return originalUnlink(file);
+};
+fs.promises.readFile = async (file, ...args) => {
+  if (readGate && file === first) {
+    readStarted = true;
+    await readGate;
+  }
+  return originalReadFile(file, ...args);
+};
 dialog.showSaveDialog = async () => { saveDialogCount += 1; return saveResult; };
 dialog.showOpenDialog = async () => openResult;
 dialog.showMessageBox = async () => { unsavedDialogCount += 1; return { response: unsavedResponse }; };
@@ -61,6 +88,7 @@ app.whenReady().then(async () => {
   win = BrowserWindow.getAllWindows()[0];
   await waitFor(() => evaluate(`Boolean(window.electronAPI && document.querySelector('.toolbar-title-main'))`).catch(() => false), 'app startup');
   await delay(100);
+  assert.ok(!initialRequests.some(url => url.includes('editor-vendor')), 'Editor should remain unloaded at startup');
   systemOpen(first);
   await waitFor(() => titleIs('first.md'), 'first system file');
   await waitFor(() => evaluate(`Boolean(document.querySelector('.markdown-preview-toc-link'))`), 'outline');
@@ -83,6 +111,104 @@ app.whenReady().then(async () => {
   systemOpen(second);
   await waitFor(() => titleIs('second.md'), 'discard and open');
   console.log('PASS unsaved cancel and discard on repeated open');
+
+  // Opening a file must not overwrite changes made while its read is pending.
+  let releaseRead;
+  readGate = new Promise(resolve => { releaseRead = resolve; });
+  readStarted = false;
+  openResult = { canceled: false, filePaths: [first] };
+  await click('打开');
+  await waitFor(() => Promise.resolve(readStarted), 'pending file read');
+  await edit('# Keep my new edit');
+  unsavedResponse = 2;
+  const promptsBeforeRead = unsavedDialogCount;
+  releaseRead();
+  readGate = null;
+  await waitFor(() => Promise.resolve(unsavedDialogCount > promptsBeforeRead), 'confirm changes after read');
+  assert.equal(await titleIs('second.md'), true);
+  assert.equal(await evaluate(`document.querySelector('textarea').value`), '# Keep my new edit');
+  unsavedResponse = 1;
+  systemOpen(second);
+  await waitFor(() => evaluate(`document.querySelector('.toolbar-title-meta').textContent !== '未保存更改'`), 'restore saved document');
+
+  readGate = new Promise(resolve => { releaseRead = resolve; });
+  readStarted = false;
+  await click('打开');
+  await waitFor(() => Promise.resolve(readStarted), 'second pending read');
+  await click('新建');
+  await waitFor(() => titleIs('未命名'), 'new document during read');
+  await edit('# New document survives');
+  releaseRead();
+  readGate = null;
+  await delay(200);
+  assert.equal(await titleIs('未命名'), true);
+  assert.equal(await evaluate(`document.querySelector('textarea').value`), '# New document survives');
+  console.log('PASS pending open protects edits and newer document operations');
+
+  const savedNew = path.join(profile, 'saved-new.md');
+  saveResult = { canceled: false, filePath: savedNew };
+  const savesBefore = saveDialogCount;
+  await evaluate(`(() => { const save = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === '保存'); save.click(); save.click(); })()`);
+  await waitFor(() => titleIs('saved-new.md'), 'queued untitled save');
+  await delay(150);
+  assert.equal(saveDialogCount, savesBefore + 1);
+  assert.equal(fs.readFileSync(savedNew, 'utf8'), '# New document survives');
+  console.log('PASS queued untitled saves reuse the selected path');
+
+  const safeMarkdown = '# A\n\n# A\n\n# A-2\n\nneedle first\n\nneedle second\n\nneedle third\n\nline one\nline two\n\n| left | right |\n| :-- | --: |\n| a | b |\n\n<div id="unsafe" style="position:fixed" onclick="evil()">safe text</div>\n\n```bash\necho "$HOME" @@TOKEN_0@@\n```\n\n```js\nconst url = "https://example.com";\n```';
+  await edit(safeMarkdown);
+  await click('分屏');
+  await waitFor(() => evaluate(`Boolean(document.querySelector('.markdown-split-content pre code'))`), 'shared live preview');
+  const liveHtml = await evaluate(`document.querySelector('.markdown-split-content').innerHTML`);
+  assert.ok(!liveHtml.includes('id="unsafe"') && !liveHtml.includes('onclick') && !liveHtml.includes('style='));
+  await click('预览');
+  await waitFor(() => evaluate(`document.querySelector('.markdown-preview-content')?.textContent.includes('needle third')`), 'reading rendering');
+  assert.equal(await evaluate(`document.querySelector('.markdown-preview-content').innerHTML`), liveHtml);
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.markdown-preview-content h1')).map(h => h.id)`), ['a', 'a-2', 'a-2-2']);
+  assert.equal(await evaluate(`document.querySelector('th:last-child').getAttribute('align')`), 'right');
+  assert.equal(await evaluate(`document.querySelector('pre code').textContent`), 'echo "$HOME" @@TOKEN_0@@\n');
+  await evaluate(`(() => { const input = document.querySelector('.markdown-preview input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'needle'); input.dispatchEvent(new Event('input', {bubbles:true})); })()`);
+  await waitFor(() => evaluate(`document.querySelectorAll('mark[data-preview-search]').length === 3`), 'all paragraphs searched');
+  await evaluate(`(() => { const input = document.querySelector('.markdown-preview input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ''); input.dispatchEvent(new Event('input', {bubbles:true})); })()`);
+  await waitFor(() => evaluate(`document.querySelectorAll('mark[data-preview-search]').length === 0`), 'search cleared');
+  console.log('PASS shared sanitized rendering, unique headings, code preservation and multi-paragraph search');
+
+  const searchFor = async term => evaluate(`(() => { const input = document.querySelector('.markdown-preview input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(term)}); input.dispatchEvent(new Event('input', {bubbles:true})); })()`);
+  await edit(Array.from({length: 510}, (_, i) => `needle ${i}`).join('\n\n'));
+  await click('预览');
+  await waitFor(() => evaluate(`document.querySelector('.markdown-preview-content')?.textContent.includes('needle 509')`), 'large search content');
+  await searchFor('needle');
+  await waitFor(() => evaluate(`document.querySelectorAll('mark[data-preview-search]').length === 500`), 'bounded search results');
+  assert.ok(await evaluate(`document.querySelector('.markdown-preview-search-status').textContent.includes('500+')`));
+  await edit(Array.from({length: 500}, (_, i) => `needle ${i}`).join('\n\n') + '\n\nNo match here');
+  await click('预览');
+  await waitFor(() => evaluate(`document.querySelector('.markdown-preview-content')?.textContent.includes('No match here')`), 'exact limit content');
+  await searchFor('needle');
+  await waitFor(() => evaluate(`document.querySelectorAll('mark[data-preview-search]').length === 500`), 'exactly 500 results');
+  assert.equal(await evaluate(`document.querySelector('.markdown-preview-search-status').textContent.includes('500+')`), false);
+  console.log('PASS search cap and exact-limit result count');
+
+  await evaluate(`document.querySelector('.help-button').focus(); document.querySelector('.help-button').click()`);
+  await waitFor(() => evaluate(`document.querySelector('dialog').open`), 'native help dialog');
+  assert.equal(await evaluate(`document.activeElement.className`), 'help-close');
+  win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+  win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+  await waitFor(() => evaluate(`!document.querySelector('dialog').open`), 'help Escape close');
+  assert.equal(await evaluate(`document.activeElement.className`), 'help-button');
+  console.log('PASS help keyboard focus and Escape restoration');
+
+  systemOpen(second);
+  await waitFor(() => titleIs('second.md'), 'external conflict document');
+  fs.writeFileSync(second, 'External changes');
+  unsavedResponse = 1;
+  const canceledSave = await evaluate(`window.electronAPI.saveFile(${JSON.stringify(second)}, 'my changes')`);
+  assert.equal(canceledSave.success, false);
+  assert.equal(fs.readFileSync(second, 'utf8'), 'External changes');
+  unsavedResponse = 0;
+  assert.equal((await evaluate(`window.electronAPI.saveFile(${JSON.stringify(second)}, '# Second\\n\\nOpened successfully')`)).success, true);
+  unsavedResponse = 1;
+  saveResult = { canceled: true };
+  console.log('PASS external disk modifications require explicit overwrite');
 
   const markdown = `# PDF 导出验证\n\n这是尚未保存的中文内容。UNSAVED_EXPORT_MARKER\n\n## 基础格式\n\n**加粗**、*斜体*、~~删除线~~与 [链接](https://example.com)。\n\n- [x] 已完成\n- [ ] 待处理\n\n> 中文引用保持清晰。\n\n![测试图片](http://127.0.0.1:${server.address().port}/image.svg)\n\n## 表格与代码\n\n| 项目 | 说明 |\n| --- | --- |\n| 中文 | 内容自动换行 |\n\n\`\`\`ts\nconst message = "代码导出测试";\n${'long_line_'.repeat(30)}\n\`\`\`\n\n## 分页验证\n\n${Array.from({length: 75}, (_, i) => `第 ${i + 1} 段：用于检查跨页排版的中文正文。Pagination paragraph ${i + 1}.`).join('\n\n')}\n\nFINAL_PAGE_MARKER\n\n<script>document.title='INJECTED'</script><img src="x" onerror="document.title='INJECTED'">`;
   await edit(markdown);
@@ -135,6 +261,20 @@ app.whenReady().then(async () => {
   await waitFor(() => Promise.resolve(unsavedDialogCount > closePromptsBefore), 'close confirmation after anchor');
   assert.equal(win.isDestroyed(), false);
   console.log('PASS close still protects unsaved content after anchor navigation');
+
+  // Even after confirmation, asynchronous draft cleanup cannot hide new edits.
+  let releaseUnlink;
+  unlinkGate = new Promise(resolve => { releaseUnlink = resolve; });
+  unsavedResponse = 1;
+  win.close();
+  await waitFor(() => Promise.resolve(unlinkStarted), 'pending close draft cleanup');
+  await edit('# Changed during close');
+  releaseUnlink();
+  unlinkGate = null;
+  await delay(150);
+  assert.equal(win.isDestroyed(), false);
+  assert.equal(await evaluate(`document.querySelector('textarea').value`), '# Changed during close');
+  console.log('PASS pending close preserves changes during draft cleanup');
 
   win.setSize(800, 650);
   await delay(150);

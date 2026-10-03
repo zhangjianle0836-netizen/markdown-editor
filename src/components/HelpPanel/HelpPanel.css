@@ -33,25 +33,21 @@
   transform: scale(0.95);
 }
 
-/* 背景遮罩 */
-.help-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.help-panel::backdrop {
   background: rgba(19, 34, 56, 0.22);
   backdrop-filter: blur(4px);
-  z-index: 999;
-  animation: fadeIn 0.2s ease-out;
 }
 
 /* 帮助面板 */
 .help-panel {
-  position: absolute;
-  top: 48px;
-  right: 0;
-  width: 480px;
+  position: fixed;
+  top: 88px;
+  right: 22px;
+  bottom: auto;
+  margin: 0 0 0 auto;
+  padding: 0;
+  color: var(--text-primary);
+  width: min(480px, calc(100vw - 32px));
   max-height: 70vh;
   background: var(--bg-panel-strong);
   border: 1px solid var(--border-primary);
@@ -199,6 +195,13 @@
   .help-panel {
     width: calc(100vw - 40px);
     max-width: 480px;
-    right: -20px;
+    right: 20px;
   }
 }
+
+@media (max-width: 480px) {
+  .help-item { flex-direction: column; align-items: stretch; }
+  .help-syntax { min-width: 0; }
+}
+
+.help-button:focus-visible, .help-close:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 3px; }

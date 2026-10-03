@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (filePath: string) => ipcRenderer.invoke('file:read', filePath),
   saveFile: (filePath: string, content: string) =>
     ipcRenderer.invoke('file:save', filePath, content),
+  getRecoveryDraft: () => ipcRenderer.invoke('draft:recover'),
+  updateRecoveryDraft: (draft: { name: string; content: string } | null) =>
+    ipcRenderer.invoke('draft:update', draft),
 
   exportPdf: (request: PdfExportRequest) => ipcRenderer.invoke('file:exportPdf', request),
 

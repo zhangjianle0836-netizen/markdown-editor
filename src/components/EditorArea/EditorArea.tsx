@@ -1,7 +1,9 @@
-import { Suspense, lazy, memo } from 'react';
+import { Suspense, lazy, memo, useMemo, useState } from 'react';
 import { Tab } from '../../types/electron';
 import { ViewMode } from '../../App';
 import { MarkdownPreview } from './MarkdownPreview';
+import { MarkdownDocument } from './MarkdownDocument';
+import { EditorErrorBoundary } from './EditorErrorBoundary';
 import './EditorArea.css';
 
 interface EditorAreaProps {
@@ -12,7 +14,7 @@ interface EditorAreaProps {
   onOpenFile?: () => void;
 }
 
-const LazyMarkdownEditor = lazy(() => import('./MarkdownEditorLoader'));
+const previewComponents = { preview: (source: string) => <MarkdownDocument content={source} /> };
 
 function EditorAreaComponent({
   tab,
@@ -21,6 +23,8 @@ function EditorAreaComponent({
   onNewFile,
   onOpenFile,
 }: EditorAreaProps) {
+  const [attempt, setAttempt] = useState(0);
+  const LazyMarkdownEditor = useMemo(() => lazy(() => import('./MarkdownEditorLoader')), [attempt]);
   const handleChange = (value: string | undefined) => {
     onContentChange(value || '');
   };
@@ -75,6 +79,7 @@ function EditorAreaComponent({
 
   return (
     <div className="editor-area">
+      <EditorErrorBoundary key={attempt} onRetry={() => setAttempt(value => value + 1)}>
       <Suspense fallback={<div className="editor-loading">编辑器加载中...</div>}>
         <LazyMarkdownEditor
           value={tab.content}
@@ -84,8 +89,11 @@ function EditorAreaComponent({
           enableScroll={true}
           visibleDragbar={false}
           hideToolbar={true}
+          components={previewComponents}
+          textareaProps={{ 'aria-label': 'Markdown 文档内容' }}
         />
       </Suspense>
+      </EditorErrorBoundary>
     </div>
   );
 }

@@ -3,9 +3,9 @@
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub release](https://img.shields.io/github/v/release/yourusername/md-editor.svg)](https://github.com/yourusername/md-editor/releases)
-[![Build Status](https://github.com/yourusername/md-editor/workflows/CI%2FCD/badge.svg)](https://github.com/yourusername/md-editor/actions)
-[![GitHub stars](https://img.shields.io/github/stars/yourusername/md-editor.svg?style=social)](https://github.com/yourusername/md-editor/stargazers)
+[![GitHub release](https://img.shields.io/github/v/release/zhangjianle0836-netizen/markdown-editor.svg)](https://github.com/zhangjianle0836-netizen/markdown-editor/releases)
+[![Build Status](https://github.com/zhangjianle0836-netizen/markdown-editor/workflows/CI%2FCD/badge.svg)](https://github.com/zhangjianle0836-netizen/markdown-editor/actions)
+[![GitHub stars](https://img.shields.io/github/stars/zhangjianle0836-netizen/markdown-editor.svg?style=social)](https://github.com/zhangjianle0836-netizen/markdown-editor/stargazers)
 
 **A lightweight, modern Markdown editor with live preview**
 
@@ -16,6 +16,16 @@
 ---
 
 <a name="english"></a>
+
+## 1.1.1 使用与验证
+
+- 草稿在停止编辑约 750ms 后写入本机应用数据目录，异常退出后再次启动可选择恢复；恢复的草稿需重新选择保存位置。正常保存或确认丢弃后清除草稿。草稿不是自动保存到原文件，最后 750ms 内的修改仍可能尚未备份。
+- 保存前检查磁盘文件是否被其他程序修改或删除，发现冲突时默认取消，只有明确选择覆盖才写入。
+- 分屏与阅读预览共享 Markdown 清洗、软换行、表格对齐和代码高亮；编辑器仅在进入编辑或分屏时加载。
+- 帮助面板支持 Tab 导航、Escape 关闭和焦点返回。无目录时正文占据完整宽度。
+- `npm run typecheck` 检查前端和 Electron 类型；`npm test` 运行单元回归；`npm run verify` 顺序执行单元测试、生产构建、真实 Electron 集成测试。
+- 验证和打包共用 `work/verification.lock`，工作线程限制为 2；已有同仓库任务运行时会拒绝重复执行。开发模式等待主进程首次编译，并在重新编译成功后重启开发实例。
+- 最低 Node.js 版本为 22.12。CI 使用 Node.js 22/24 验证 macOS、Windows、Linux。Linux 的界面测试需要 Xvfb。
 
 ## English
 
@@ -36,7 +46,7 @@ MD Editor is a fast, secure, and lightweight desktop Markdown editor built with 
 
 #### Markdown Support
 - ✅ **GFM Support** - Tables, task lists, strikethrough, and more
-- ✅ **Syntax Highlighting** - Beautiful code blocks with automatic language detection
+- ✅ **Syntax Highlighting** - Code highlighting for explicitly labelled JS/TS, shell, CSS, HTML and Markdown blocks
 - ✅ **Auto-links** - Automatic URL detection and linking
 - ✅ **XSS Protection** - Secure HTML sanitization with DOMPurify
 
@@ -44,7 +54,7 @@ MD Editor is a fast, secure, and lightweight desktop Markdown editor built with 
 - 🔒 **Capability-based File Access** - Only user-authorized files can be read or written
 - ⚡ **Bounded Rendering** - Deferred preview updates and capped search results
 - 🚀 **Code Splitting** - Faster startup with optimized chunks
-- 📦 **Small Bundle** - Only 104MB installed
+- 📦 **Small Bundle** - Renderer dependencies are bundled and excluded from runtime node_modules
 
 #### Cross-Platform
 - 🍎 **macOS Native** - Native window styling with traffic light buttons
@@ -61,8 +71,8 @@ MD Editor is a fast, secure, and lightweight desktop Markdown editor built with 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/md-editor.git
-cd md-editor
+git clone https://github.com/zhangjianle0836-netizen/markdown-editor.git
+cd markdown-editor
 
 # Install dependencies
 npm install
@@ -152,7 +162,7 @@ md-editor/
 #### Available Scripts
 
 - `npm run dev` - Start Vite development server only
-- `npm run build` - Build React application
+- `npm run build` - Type-check and build both renderer and Electron, then check lazy chunks
 - `npm run electron:dev` - Start Electron in development mode
 - `npm run electron:build` - Build Electron app for production
 
@@ -222,8 +232,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### 📮 Contact & Support
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/md-editor/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/yourusername/md-editor/discussions)
+- **Issues:** [GitHub Issues](https://github.com/zhangjianle0836-netizen/markdown-editor/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/zhangjianle0836-netizen/markdown-editor/discussions)
 
 ---
 
@@ -251,7 +261,7 @@ MD Editor 是一个基于 Electron 和 React 构建的快速、安全、轻量�
 
 #### Markdown 支持
 - ✅ **GFM 支持** - 表格、任务列表、删除线等
-- ✅ **语法高亮** - 美观的代码块，自动语言检测
+- ✅ **语法高亮** - 为标注语言的 JS/TS、Shell、CSS、HTML 和 Markdown 代码块提供高亮
 - ✅ **自动链接** - 自动 URL 检测和链接
 - ✅ **XSS 防护** - 使用 DOMPurify 进行安全的 HTML 净化
 
@@ -259,7 +269,7 @@ MD Editor 是一个基于 Electron 和 React 构建的快速、安全、轻量�
 - 🔒 **授权文件访问** - 仅允许读写用户明确选择的文件
 - ⚡ **有界渲染** - 延迟预览更新并限制搜索结果规模
 - 🚀 **代码分割** - 通过优化块实现更快的启动
-- 📦 **小巧体积** - 仅 104MB 安装大小
+- 📦 **小巧体积** - 前端依赖打入资源包，不重复携带运行时 node_modules
 
 #### 跨平台支持
 - 🍎 **macOS 原生** - 原生窗口样式和红黄绿按钮
@@ -276,8 +286,8 @@ MD Editor 是一个基于 Electron 和 React 构建的快速、安全、轻量�
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/md-editor.git
-cd md-editor
+git clone https://github.com/zhangjianle0836-netizen/markdown-editor.git
+cd markdown-editor
 
 # 安装依赖
 npm install
@@ -378,8 +388,8 @@ npm run electron:build
 
 ### 📮 联系与支持
 
-- **问题反馈:** [GitHub Issues](https://github.com/yourusername/md-editor/issues)
-- **讨论交流:** [GitHub Discussions](https://github.com/yourusername/md-editor/discussions)
+- **问题反馈:** [GitHub Issues](https://github.com/zhangjianle0836-netizen/markdown-editor/issues)
+- **讨论交流:** [GitHub Discussions](https://github.com/zhangjianle0836-netizen/markdown-editor/discussions)
 
 ---
 

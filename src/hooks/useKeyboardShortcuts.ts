@@ -16,6 +16,11 @@ export function useKeyboardShortcuts({
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modifierKey = isMac ? e.metaKey : e.ctrlKey;
 
+      if (document.querySelector('dialog[open]')) {
+        if (modifierKey && ['o', 's', 'n'].includes(e.key.toLowerCase())) e.preventDefault();
+        return;
+      }
+
       // Cmd/Ctrl + O: Open file
       if (modifierKey && e.key === 'o') {
         e.preventDefault();

@@ -6,11 +6,12 @@ import {
   shell,
   type IpcMainInvokeEvent,
 } from 'electron';
-import * as crypto from 'crypto';
 import { getPdfFileName, isPdfExportRequest, isPdfFilePath, renderPdf, type PdfExportResult } from './pdf';
 import * as fs from 'fs';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
+import { atomicWriteFile, getFileVersion, MAX_MARKDOWN_FILE_SIZE } from './files';
+import { isRecoveryDraft, type RecoveryDraft } from './recovery';
 import {
   findSupportedFileArgument,
   isSafeExternalUrl,
@@ -29,7 +30,10 @@ let pdfExportPending = false;
 const pendingFilePaths: string[] = [];
 const readablePaths = new Set<string>();
 const writablePaths = new Set<string>();
-const MAX_MARKDOWN_FILE_SIZE = 10 * 1024 * 1024;
+const fileVersions = new Map<string, string | null>();
+let draftQueue: Promise<void> = Promise.resolve();
+let recoveryRequest: Promise<RecoveryDraft | null> | null = null;
+const getDraftPath = () => path.join(app.getPath('userData'), 'recovery-draft.json');
 
 const getRendererEntryUrl = (): string => {
   if (process.env.NODE_ENV === 'development') {
@@ -100,44 +104,6 @@ const configureNavigationProtection = (window: BrowserWindow): void => {
   });
 };
 
-const atomicWriteFile = async (
-  filePath: string,
-  content: string | Buffer
-): Promise<void> => {
-  const directory = path.dirname(filePath);
-  const filename = path.basename(filePath);
-  const temporaryPath = path.join(
-    directory,
-    `.${filename}.${process.pid}.${crypto.randomUUID()}.tmp`
-  );
-
-  let mode = 0o600;
-  try {
-    const existingStats = await fs.promises.stat(filePath);
-    mode = existingStats.mode & 0o777;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw error;
-    }
-  }
-
-  let temporaryFile: fs.promises.FileHandle | null = null;
-  try {
-    temporaryFile = await fs.promises.open(temporaryPath, 'wx', mode);
-    await temporaryFile.writeFile(content, { encoding: 'utf-8' });
-    await temporaryFile.sync();
-    await temporaryFile.close();
-    temporaryFile = null;
-    await fs.promises.rename(temporaryPath, filePath);
-  } catch (error) {
-    if (temporaryFile) {
-      await temporaryFile.close().catch(() => undefined);
-    }
-    await fs.promises.unlink(temporaryPath).catch(() => undefined);
-    throw error;
-  }
-};
-
 const readLocalMarkdownFile = async (
   filePath: string,
   requireGrant = true
@@ -160,7 +126,12 @@ const readLocalMarkdownFile = async (
       };
     }
 
+    const version = await getFileVersion(normalizedPath);
     const content = await fs.promises.readFile(normalizedPath, 'utf-8');
+    if (version !== await getFileVersion(normalizedPath)) {
+      return { success: false, error: '读取期间文件已被其他程序修改，请重新打开。' };
+    }
+    fileVersions.set(normalizedPath, version);
     return { success: true, content };
   } catch (error) {
     return { success: false, error: (error as Error).message };
@@ -239,6 +210,10 @@ function createWindow(): void {
   rendererReady = false;
   closeRequestPending = false;
   forceClose = false;
+  recoveryRequest = null;
+  readablePaths.clear();
+  writablePaths.clear();
+  fileVersions.clear();
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -301,6 +276,51 @@ function createWindow(): void {
 }
 
 const registerIpcHandlers = (): void => {
+  ipcMain.handle('draft:update', (event, draft: unknown) => {
+    if (!isTrustedIpcSender(event) || (draft !== null && !isRecoveryDraft(draft))) return false;
+    const operation = draftQueue.then(async () => {
+      if (draft === null) {
+        await fs.promises.unlink(getDraftPath()).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') throw error;
+        });
+      } else {
+        await fs.promises.mkdir(app.getPath('userData'), { recursive: true });
+        await atomicWriteFile(getDraftPath(), JSON.stringify(draft));
+      }
+    });
+    draftQueue = operation.catch((error) => console.error('[Main] Draft backup failed:', error));
+    return operation.then(() => true, () => false);
+  });
+
+  ipcMain.handle('draft:recover', (event) => {
+    if (!isTrustedIpcSender(event) || !mainWindow) return null;
+    if (!recoveryRequest) {
+      const window = mainWindow;
+      recoveryRequest = (async () => {
+        try {
+          await draftQueue;
+          const stats = await fs.promises.stat(getDraftPath());
+          if (stats.size > MAX_MARKDOWN_FILE_SIZE * 6 + 1024) return null;
+          const draft: unknown = JSON.parse(await fs.promises.readFile(getDraftPath(), 'utf-8'));
+          if (!isRecoveryDraft(draft) || window.isDestroyed()) return null;
+          const result = await dialog.showMessageBox(window, {
+            type: 'question', title: '恢复未保存的草稿',
+            message: `发现“${draft.name}”的未保存草稿`,
+            detail: '恢复后请重新选择保存位置。原文件不会被自动覆盖。',
+            buttons: ['恢复草稿', '丢弃草稿'], defaultId: 0, cancelId: 0,
+          });
+          if (result.response === 0) return draft;
+          await fs.promises.unlink(getDraftPath());
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            console.error('[Main] Draft recovery failed:', error);
+          }
+        }
+        return null;
+      })();
+    }
+    return recoveryRequest;
+  });
   ipcMain.handle('renderer:ready', async (event) => {
     if (!isTrustedIpcSender(event)) {
       return false;
@@ -363,7 +383,19 @@ const registerIpcHandlers = (): void => {
           };
         }
 
+        if (fileVersions.has(normalizedPath) &&
+            fileVersions.get(normalizedPath) !== await getFileVersion(normalizedPath)) {
+          if (!mainWindow) return { success: false, error: '文件已被其他程序修改。' };
+          const result = await dialog.showMessageBox(mainWindow, {
+            type: 'warning', title: '文件已被修改',
+            message: `磁盘上的“${path.basename(normalizedPath)}”已被其他程序修改或删除`,
+            detail: '覆盖保存会替换磁盘上的内容。取消后可以复制当前内容或保存到其他位置。',
+            buttons: ['覆盖保存', '取消'], defaultId: 1, cancelId: 1,
+          });
+          if (result.response !== 0) return { success: false, error: '已取消保存，当前内容已保留。' };
+        }
         await atomicWriteFile(normalizedPath, content);
+        fileVersions.set(normalizedPath, await getFileVersion(normalizedPath));
         return { success: true };
       } catch (error) {
         return { success: false, error: (error as Error).message };
@@ -397,7 +429,8 @@ const registerIpcHandlers = (): void => {
       }
 
       const pdf = await renderPdf(request);
-      await atomicWriteFile(result.filePath, pdf);
+      // An export must never follow a .pdf link into a source Markdown file.
+      await atomicWriteFile(result.filePath, pdf, { preserveSymbolicLink: false });
       return { success: true, filePath: result.filePath };
     } catch (error) {
       return { success: false, error: (error as Error).message };

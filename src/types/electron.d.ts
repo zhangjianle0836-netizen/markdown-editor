@@ -23,6 +23,8 @@ export interface FileSaveResult {
 export interface ElectronAPI {
   readFile: (filePath: string) => Promise<FileReadResult>;
   saveFile: (filePath: string, content: string) => Promise<FileSaveResult>;
+  getRecoveryDraft: () => Promise<{ name: string; content: string } | null>;
+  updateRecoveryDraft: (draft: { name: string; content: string } | null) => Promise<boolean>;
   exportPdf: (request: { name: string; html: string }) => Promise<{
     success: boolean;
     canceled?: boolean;

@@ -33,7 +33,7 @@ export const markdownToHTML = (markdown: string): string => {
         'input',
       ],
       ALLOWED_ATTR: [
-        'href', 'src', 'alt', 'class', 'title',
+        'href', 'src', 'alt', 'class', 'title', 'align', 'start',
         'type', 'disabled', 'checked',
       ],
       ALLOW_DATA_ATTR: false,

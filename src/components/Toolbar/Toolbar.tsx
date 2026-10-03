@@ -72,6 +72,7 @@ export function Toolbar({
         {/* 视图切换按钮 */}
         <div className="view-mode-buttons">
           <button
+            aria-pressed={viewMode === 'preview'}
             onClick={() => onViewModeChange('preview')}
             className={`toolbar-button ${viewMode === 'preview' ? 'active' : ''}`}
             title="仅显示预览效果"
@@ -79,6 +80,7 @@ export function Toolbar({
             预览
           </button>
           <button
+            aria-pressed={viewMode === 'edit'}
             onClick={() => onViewModeChange('edit')}
             className={`toolbar-button ${viewMode === 'edit' ? 'active' : ''}`}
             title="仅显示编辑器"
@@ -86,6 +88,7 @@ export function Toolbar({
             编辑
           </button>
           <button
+            aria-pressed={viewMode === 'live'}
             onClick={() => onViewModeChange('live')}
             className={`toolbar-button ${viewMode === 'live' ? 'active' : ''}`}
             title="左侧编辑，右侧实时预览"
