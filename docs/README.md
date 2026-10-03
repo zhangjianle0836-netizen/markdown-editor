@@ -1,49 +1,27 @@
-# MD Editor 文档中心
+# MD Editor 文档目录
 
-欢迎查阅 MD Editor 的完整文档！
+当前维护的说明对应 1.1.1。以下文档以中文为主，项目首页和贡献指南附有英文摘要。
 
-## 📚 文档目录
+## 使用与安装
 
-### 用户文档
-- **[用户指南](./user-guide.md)** - 详细的使用说明和功能介绍
-- **[文件关联设置](./features/file-association.md)** - macOS 文件关联配置指南
+- [项目首页](../README.md)：功能、源码启动、验证命令和当前边界。
+- [用户指南](user-guide.md)：打开、保存、草稿恢复、冲突确认、阅读与 PDF 导出。
+- [安装与构建](deployment/installation.md)：平台构建、安装包来源与升级注意事项。
+- [macOS 文件关联](features/file-association.md)：设置默认打开应用。
 
-### 开发者文档
-- **[开发者指南](./developer-guide.md)** - 架构说明、开发环境配置和贡献流程
-- **[项目架构](./architecture.md)** - 项目结构和技术栈详解
-- **[AI 打包与签名操作手册](../PACKAGING_FOR_AI.md)** - macOS Developer ID 打包、签名与验证流程
+## 开发与贡献
 
-### 贡献指南
-- **[Git 提交规范](./contributing/git-commit-guide.md)** - 代码提交的最佳实践
+- [开发指南](developer-guide.md)：环境、模块职责、测试和资源限制。
+- [项目架构](architecture.md)：主进程、预加载、渲染和文件数据流。
+- [贡献指南](../CONTRIBUTING.md)：Issue、代码约定与 Pull Request。
+- [安全说明](../SECURITY.md)：安全边界、支持范围和漏洞报告。
+- [行为准则](../CODE_OF_CONDUCT.md)。
+- [打包与签名](../PACKAGING_FOR_AI.md)：可复用的 macOS 打包、签名和验证步骤。
+- [1.1.1 验证记录](optimization/1.1.1-verification.md)：本地构建体积、测试范围与限制。
+- [更新日志](../CHANGELOG.md)。
 
-## 🚀 快速链接
+## 历史资料
 
-- [主文档](../README.md)
-- [贡献指南](../CONTRIBUTING.md)
-- [更新日志](../CHANGELOG.md)
-- [行为准则](../CODE_OF_CONDUCT.md)
+`optimization/` 下其余报告、`debugging/` 下的旧问题记录，以及 [Git 提交参考](contributing/git-commit-guide.md) 保留为历史背景，其中的版本号、性能数字和建议可能已经过时。当前命令以 `package.json`、开发指南和最新验证记录为准。
 
-## 📖 文档导航
-
-### 我想使用 MD Editor
-→ 查看 [用户指南](./user-guide.md)
-
-### 我想开发/贡献代码
-→ 查看 [开发者指南](./developer-guide.md)
-
-### 我想了解项目结构
-→ 查看 [项目架构](./architecture.md)
-
-### 我想设置文件关联（macOS）
-→ 查看 [文件关联设置](./features/file-association.md)
-
-### 我想打包签名 macOS 版本
-→ 查看 [AI 打包与签名操作手册](../PACKAGING_FOR_AI.md)
-
-## 🌍 多语言支持
-
-所有主要文档均提供英文和中文双语支持。
-
----
-
-如有问题，欢迎在 [GitHub Issues](https://github.com/yourusername/md-editor/issues) 提问！
+问题反馈：[GitHub Issues](https://github.com/zhangjianle0836-netizen/markdown-editor/issues)。

@@ -40,8 +40,8 @@ If applicable, add screenshots to help explain your problem.
 ## 💻 环境信息 | Environment Info
 
 - **操作系统 | OS**: [例如 | e.g. macOS 14.0, Windows 11, Ubuntu 22.04]
-- **MD Editor 版本 | MD Editor Version**: [例如 | e.g. 1.0.0]
-- **Node.js 版本**: [例如 | e.g. 18.0.0]
+- **MD Editor 版本 | MD Editor Version**: [例如 | e.g. 1.1.1]
+- **Node.js 版本**: [例如 | e.g. 22.12.0]
 
 ## 📝 附加信息 | Additional Context
 

@@ -1,402 +1,97 @@
 # MD Editor
 
-<div align="center">
+[![CI](https://github.com/zhangjianle0836-netizen/markdown-editor/actions/workflows/ci.yml/badge.svg)](https://github.com/zhangjianle0836-netizen/markdown-editor/actions/workflows/ci.yml)
+[![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub release](https://img.shields.io/github/v/release/zhangjianle0836-netizen/markdown-editor.svg)](https://github.com/zhangjianle0836-netizen/markdown-editor/releases)
-[![Build Status](https://github.com/zhangjianle0836-netizen/markdown-editor/workflows/CI%2FCD/badge.svg)](https://github.com/zhangjianle0836-netizen/markdown-editor/actions)
-[![GitHub stars](https://img.shields.io/github/stars/zhangjianle0836-netizen/markdown-editor.svg?style=social)](https://github.com/zhangjianle0836-netizen/markdown-editor/stargazers)
+一个基于 Electron、React 和 TypeScript 的本地 Markdown 阅读与编辑工具。打开文档默认进入阅读预览，新建文档默认进入编辑模式。当前版本为 **1.1.1**，界面使用简体中文。
 
-**A lightweight, modern Markdown editor with live preview**
+[使用指南](docs/user-guide.md) · [开发指南](docs/developer-guide.md) · [架构说明](docs/architecture.md) · [贡献指南](CONTRIBUTING.md) · [English](#english)
 
-[English](#english) | [中文](#中文)
+## 可以做什么
 
-</div>
+| 能力 | 说明 |
+| --- | --- |
+| 本地编辑 | 单文件工作区，支持预览、编辑和分屏，使用 UTF-8 读写 |
+| Markdown 预览 | 标题、列表、链接、图片、表格、任务列表和删除线；分屏与阅读使用同一套 HTML 清洗 |
+| 阅读辅助 | 3 个及以上标题显示目录；正文搜索、命中导航和阅读进度；搜索最多高亮 500 处，跳过代码块 |
+| 文件保护 | 新建、打开、关闭或退出前处理未保存更改；过期读取不会覆盖较新的编辑 |
+| 草稿恢复 | 停止编辑约 750ms 后备份未保存草稿，下次启动可选择恢复；恢复后重新选择保存位置 |
+| 保存冲突提醒 | 检测磁盘文件被其他程序修改或删除，默认取消覆盖，保留当前编辑内容 |
+| PDF 导出 | 导出点击时的当前内容，包含未保存修改；A4 排版，不改变源文件保存状态 |
+| 代码高亮 | 按代码块标注的语言高亮 JS/TS、Shell、CSS、HTML 和 Markdown，未知语言显示原文 |
+| 按需加载 | 编辑器仅在编辑或分屏时加载，前端依赖不重复携带到安装包的 node_modules |
 
----
+## 获取和运行
 
-<a name="english"></a>
+已发布安装包请查看 [Releases](https://github.com/zhangjianle0836-netizen/markdown-editor/releases)。附件、架构、签名和公证状态以对应发布说明为准；没有可用安装包时，可以从源码运行。GitHub Actions 的构建附件用于验证，不能视为已签名、公证的正式发行版。
 
-## 1.1.1 使用与验证
+需要 **Node.js 22.12+、npm 和 Git**：
 
-- 草稿在停止编辑约 750ms 后写入本机应用数据目录，异常退出后再次启动可选择恢复；恢复的草稿需重新选择保存位置。正常保存或确认丢弃后清除草稿。草稿不是自动保存到原文件，最后 750ms 内的修改仍可能尚未备份。
-- 保存前检查磁盘文件是否被其他程序修改或删除，发现冲突时默认取消，只有明确选择覆盖才写入。
-- 分屏与阅读预览共享 Markdown 清洗、软换行、表格对齐和代码高亮；编辑器仅在进入编辑或分屏时加载。
-- 帮助面板支持 Tab 导航、Escape 关闭和焦点返回。无目录时正文占据完整宽度。
-- `npm run typecheck` 检查前端和 Electron 类型；`npm test` 运行单元回归；`npm run verify` 顺序执行单元测试、生产构建、真实 Electron 集成测试。
-- 验证和打包共用 `work/verification.lock`，工作线程限制为 2；已有同仓库任务运行时会拒绝重复执行。开发模式等待主进程首次编译，并在重新编译成功后重启开发实例。
-- 最低 Node.js 版本为 22.12。CI 使用 Node.js 22/24 验证 macOS、Windows、Linux。Linux 的界面测试需要 Xvfb。
+```bash
+git clone https://github.com/zhangjianle0836-netizen/markdown-editor.git
+cd markdown-editor
+npm ci
+npm run electron:dev
+```
+
+开发模式会启动 Vite，并等待 Electron 主进程编译成功后打开应用；主进程重新编译成功后会重启开发实例。只查看浏览器界面可使用 `npm run dev`，但文件读写和 PDF 导出需要桌面应用。
+
+## 基本使用
+
+1. 点击“打开”选择文档，或点击“新建”开始写作。
+2. 使用“预览”“编辑”“分屏”切换视图。
+3. 点击“保存”写回文件；新文档首次保存时选择位置。
+4. 点击“导出 PDF”，选择 `.pdf` 目标文件。
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `Cmd/Ctrl + N` | 新建 |
+| `Cmd/Ctrl + O` | 打开 |
+| `Cmd/Ctrl + S` | 保存 |
+| `Escape` | 关闭已打开的语法帮助面板 |
+
+系统文件关联支持 `.md`、`.markdown`、`.mdown`、`.mkd`；文件对话框也可打开 `.txt`。读取和保存内容的上限为 10 MiB。
+
+## 开发与验证
+
+| 命令 | 用途 |
+| --- | --- |
+| `npm run electron:dev` | 桌面开发模式 |
+| `npm run dev` | 仅运行 Vite 界面开发服务器 |
+| `npm run typecheck` | 检查前端与 Electron 类型 |
+| `npm test` | 编译主进程并执行单元测试 |
+| `npm run build` | 类型检查、主进程与前端构建、惰性加载依赖图检查 |
+| `npm run test:integration` | 对已有构建运行两个隔离的 Electron 集成测试 |
+| `npm run verify` | 顺序完成单元测试、生产构建与 Electron 集成测试 |
+| `npm run electron:build` | 构建并为当前平台打包，输出至 `release/` |
+
+测试、构建和打包共用 `work/verification.lock`。同仓库已有任务运行时会拒绝启动另一个任务，工作线程限制为 2。请顺序执行重型命令；不要删除仍有进程持有的锁。Linux 无显示环境需要 Xvfb，详见 [开发指南](docs/developer-guide.md)。
+
+CI 配置 macOS、Windows、Linux 与 Node.js 22/24 的验证矩阵。最新结果见上方 CI 链接；平台的构建配置与实际验证结果需要分开看。1.1.1 的 macOS arm64 本地安装、签名及运行已经验证，具体测试范围见 [验证记录](docs/optimization/1.1.1-verification.md)。
+
+## 数据与当前边界
+
+- 文档保存在你选择的本地位置，草稿保存在 Electron 应用数据目录。没有内置账号或云同步服务。
+- 外部链接会交给系统浏览器；文档中的远程图片会请求对应 HTTP(S) 地址。因此包含远程图片的文档可能需要网络。
+- 草稿备份不等于自动保存到原文件，最后约 750ms 的修改可能尚未备份。正常保存或确认丢弃后清除草稿。
+- 相对路径图片暂不按 Markdown 文件所在目录解析，预览和 PDF 建议使用可访问的 HTTP(S) 图片地址。
+- 当前没有多标签、文件树、HTML 导出、全文替换或插件系统。大型文档的解析与预览增强仍在渲染线程执行。
+- MIT 许可证适用于本项目代码，依赖各自的许可证仍需遵守。保留 [LICENSE](LICENSE) 中的版权和授权文本。
+
+## 文档与参与
+
+- [文档目录](docs/README.md)：使用、开发、架构、安装和打包入口。
+- [贡献指南](CONTRIBUTING.md)：反馈问题、开发约定和 Pull Request 流程。
+- [安全说明](SECURITY.md)：安全边界和漏洞报告方式。
+- [更新日志](CHANGELOG.md)：各版本变化。
+- [Issues](https://github.com/zhangjianle0836-netizen/markdown-editor/issues)：缺陷和功能建议。
 
 ## English
 
-### Overview
+MD Editor is an MIT-licensed, local desktop Markdown reader and editor with a Simplified Chinese interface. It offers reading, editing and split views, a document outline, capped text search, local draft recovery, external file-change confirmation and PDF export of the current content, including unsaved edits.
 
-MD Editor is a fast, secure, and lightweight desktop Markdown editor built with Electron and React. It provides a clean, distraction-free writing experience with real-time preview and full GitHub Flavored Markdown (GFM) support.
+Requires Node.js 22.12+, npm and Git. Clone this repository, run `npm ci`, then `npm run electron:dev`. Run `npm run verify` for sequential unit tests, type checks, production build, lazy-loading validation and isolated Electron integration tests. On headless Linux, use Xvfb as described in the developer guide.
 
-**Design Philosophy:** Simple, focused, and efficient. MD Editor is a single-file editor that helps you focus on writing, not managing files.
+The editor is loaded on demand. Both preview modes share sanitized Markdown rendering. Draft backup occurs after about 750ms of inactivity and does not save the source file automatically. Relative image paths, multiple tabs and HTML export are not supported. Remote images may make network requests.
 
-### ✨ Features
-
-#### Core Features
-- 📝 **Real-time Preview** - Live rendering with GitHub Flavored Markdown (GFM) support
-- 🎨 **Clean UI** - Minimalist design focused on content creation
-- 📄 **PDF Export** - Export current content, including unsaved edits, as an A4 PDF using the “导出 PDF” toolbar button (desktop app)
-- 💾 **Smart Save** - Unsaved changes protection with visual indicators
-- ⚡ **Fast & Lightweight** - Optimized performance with small bundle size
-
-#### Markdown Support
-- ✅ **GFM Support** - Tables, task lists, strikethrough, and more
-- ✅ **Syntax Highlighting** - Code highlighting for explicitly labelled JS/TS, shell, CSS, HTML and Markdown blocks
-- ✅ **Auto-links** - Automatic URL detection and linking
-- ✅ **XSS Protection** - Secure HTML sanitization with DOMPurify
-
-#### Security & Performance
-- 🔒 **Capability-based File Access** - Only user-authorized files can be read or written
-- ⚡ **Bounded Rendering** - Deferred preview updates and capped search results
-- 🚀 **Code Splitting** - Faster startup with optimized chunks
-- 📦 **Small Bundle** - Renderer dependencies are bundled and excluded from runtime node_modules
-
-#### Cross-Platform
-- 🍎 **macOS Native** - Native window styling with traffic light buttons
-- 🪟 **Windows Support** - Seamless integration with Windows
-- 🐧 **Linux Support** - Works on all major Linux distributions
-
-### 🚀 Quick Start
-
-#### Prerequisites
-- Node.js 22.12+
-- npm or yarn
-
-#### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/zhangjianle0836-netizen/markdown-editor.git
-cd markdown-editor
-
-# Install dependencies
-npm install
-
-# Start in development mode
-npm run electron:dev
-
-# Build for production
-npm run electron:build
-```
-
-The built application will be in the `release` directory.
-
-### 📖 User Guide
-
-#### Basic Usage
-
-**Creating a New File:**
-- Click "New" button or press `Cmd/Ctrl + N`
-- Start writing your Markdown content
-
-**Opening a File:**
-- Click "Open" button or press `Cmd/Ctrl + O`
-- Select a `.md` or `.markdown` file from your computer
-
-**Saving Your Work:**
-- Click "Save" button or press `Cmd/Ctrl + S`
-- If it's a new file, you'll be prompted to choose a location
-
-**Live Preview:**
-- Your Markdown renders in real-time as you type
-- Supports all GFM features including tables, task lists, and code blocks
-
-#### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Cmd/Ctrl + N` | New file |
-| `Cmd/Ctrl + O` | Open file |
-| `Cmd/Ctrl + S` | Save file |
-
-For detailed usage instructions, see [User Guide](./docs/user-guide.md).
-
-### 🛠️ Tech Stack
-
-- **Electron 44** - Cross-platform desktop framework
-- **React 18** - Modern UI library
-- **TypeScript** - Type-safe development
-- **Vite** - Next-generation build tool
-- **marked.js** - Fast Markdown parser with GFM support
-- **DOMPurify** - XSS protection and HTML sanitization
-- **@uiw/react-md-editor** - WYSIWYG editor component
-
-### 📂 Project Structure
-
-```
-md-editor/
-├── electron/               # Electron main process
-│   ├── main.ts            # Main process entry
-│   └── preload.ts         # Preload script for IPC
-├── src/                   # React rendering process
-│   ├── components/        # React components
-│   │   ├── EditorArea/    # Markdown editor
-│   │   ├── Toast/         # Notifications
-│   │   └── Toolbar/       # Main toolbar
-│   ├── hooks/             # Custom React hooks
-│   ├── types/             # TypeScript definitions
-│   └── utils/             # Utility functions
-├── build/                 # Build resources
-│   └── icon.svg           # Application icon
-├── public/                # Static assets
-├── .github/               # GitHub workflows & templates
-│   ├── workflows/         # CI/CD workflows
-│   └── ISSUE_TEMPLATE/    # Issue templates
-├── docs/                  # Documentation
-│   ├── user-guide.md     # User guide
-│   ├── developer-guide.md # Developer docs
-│   └── architecture.md   # Project structure
-├── README.md              # This file
-├── CONTRIBUTING.md        # Contribution guide
-├── CODE_OF_CONDUCT.md     # Code of conduct
-└── CHANGELOG.md           # Version history
-```
-
-### 🔧 Development
-
-#### Available Scripts
-
-- `npm run dev` - Start Vite development server only
-- `npm run build` - Type-check and build both renderer and Electron, then check lazy chunks
-- `npm run electron:dev` - Start Electron in development mode
-- `npm run electron:build` - Build Electron app for production
-
-For the reproducible macOS Developer ID signing flow, see [AI Packaging Guide](./PACKAGING_FOR_AI.md).
-
-#### Architecture
-
-MD Editor follows a classic Electron architecture:
-
-1. **Main Process** (`electron/main.ts`)
-   - Creates and manages application windows
-   - Handles file system operations via IPC
-   - Manages native dialogs
-   - Implements security validation
-
-2. **Renderer Process** (React app)
-   - Handles all UI rendering
-   - Communicates with main process via preload script
-   - Manages application state with React hooks
-
-3. **Preload Script** (`electron/preload.ts`)
-   - Provides secure bridge between main and renderer
-   - Exposes limited API to renderer via contextBridge
-
-For detailed development information, see [Developer Guide](./docs/developer-guide.md).
-
-### 🗺️ Roadmap
-
-#### Version 1.x
-- [x] Single-file editing with live preview
-- [x] GFM support
-- [x] Cross-platform builds
-- [ ] Auto-save functionality
-- [ ] Dark theme support
-- [ ] Export to PDF/HTML
-
-#### Version 2.x
-- [ ] Find and replace
-- [ ] Image paste and upload
-- [ ] Custom themes
-- [ ] Plugin system
-
-See [CHANGELOG.md](./CHANGELOG.md) for release history.
-
-### 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
-
-#### Ways to Contribute
-- 🐛 Report bugs
-- 💡 Suggest new features
-- 🔧 Submit pull requests
-- 📝 Improve documentation
-- ⭐ Star the project
-
-### 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### 🙏 Acknowledgments
-
-- [@uiw/react-md-editor](https://github.com/uiwjs/react-md-editor) - Excellent Markdown editor component
-- [marked.js](https://marked.js.org/) - Fast and lightweight Markdown parser
-- [DOMPurify](https://github.com/cure53/DOMPurify) - XSS sanitizer
-- [Electron](https://www.electronjs.org/) - Cross-platform desktop apps
-- [React](https://react.dev/) - UI framework
-
-### 📮 Contact & Support
-
-- **Issues:** [GitHub Issues](https://github.com/zhangjianle0836-netizen/markdown-editor/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/zhangjianle0836-netizen/markdown-editor/discussions)
-
----
-
-<a name="中文"></a>
-
-## 中文
-
-### 概述
-
-MD Editor 是一个基于 Electron 和 React 构建的快速、安全、轻量级的桌面 Markdown 编辑器。它提供干净、无干扰的写作体验，支持实时预览和完整的 GitHub 风格 Markdown (GFM) 功能。
-
-**设计理念:** 简单、专注、高效。MD Editor 是一个单文件编辑器，帮助你专注于写作，而不是管理文件。
-
-### 导出 PDF
-
-在桌面应用中打开或新建文档，点击工具栏的“导出 PDF”，选择保存位置即可。导出包含点击时尚未保存的修改，使用 A4 白底排版，支持中文、表格、代码块、任务列表和链接。图片需使用可访问的 HTTP(S) 地址；相对路径图片与当前预览一样，不会自动按 Markdown 文件所在目录解析。导出不会更改源文件或其保存状态。
-
-### ✨ 特性
-
-#### 核心功能
-- 📝 **实时预览** - 支持 GitHub 风格 Markdown (GFM) 的实时渲染
-- 🎨 **简洁界面** - 专注于内容创作的极简设计
-- 💾 **智能保存** - 未保存更改保护和可视化提示
-- ⚡ **快速轻量** - 优化的性能和小巧的体积
-
-#### Markdown 支持
-- ✅ **GFM 支持** - 表格、任务列表、删除线等
-- ✅ **语法高亮** - 为标注语言的 JS/TS、Shell、CSS、HTML 和 Markdown 代码块提供高亮
-- ✅ **自动链接** - 自动 URL 检测和链接
-- ✅ **XSS 防护** - 使用 DOMPurify 进行安全的 HTML 净化
-
-#### 安全与性能
-- 🔒 **授权文件访问** - 仅允许读写用户明确选择的文件
-- ⚡ **有界渲染** - 延迟预览更新并限制搜索结果规模
-- 🚀 **代码分割** - 通过优化块实现更快的启动
-- 📦 **小巧体积** - 前端依赖打入资源包，不重复携带运行时 node_modules
-
-#### 跨平台支持
-- 🍎 **macOS 原生** - 原生窗口样式和红黄绿按钮
-- 🪟 **Windows 支持** - 与 Windows 无缝集成
-- 🐧 **Linux 支持** - 支持所有主流 Linux 发行版
-
-### 🚀 快速开始
-
-#### 环境要求
-- Node.js 22.12+
-- npm 或 yarn
-
-#### 安装步骤
-
-```bash
-# 克隆仓库
-git clone https://github.com/zhangjianle0836-netizen/markdown-editor.git
-cd markdown-editor
-
-# 安装依赖
-npm install
-
-# 开发模式启动
-npm run electron:dev
-
-# 生产环境打包
-npm run electron:build
-```
-
-打包后的应用程序位于 `release` 目录。
-
-### 📖 使用指南
-
-#### 基本使用
-
-**创建新文件:**
-- 点击 "New" 按钮或按 `Cmd/Ctrl + N`
-- 开始编写你的 Markdown 内容
-
-**打开文件:**
-- 点击 "Open" 按钮或按 `Cmd/Ctrl + O`
-- 从电脑中选择 `.md` 或 `.markdown` 文件
-
-**保存工作:**
-- 点击 "Save" 按钮或按 `Cmd/Ctrl + S`
-- 如果是新文件，会提示你选择保存位置
-
-**实时预览:**
-- 你的 Markdown 在输入时实时渲染
-- 支持所有 GFM 功能，包括表格、任务列表和代码块
-
-#### 快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Cmd/Ctrl + N` | 新建文件 |
-| `Cmd/Ctrl + O` | 打开文件 |
-| `Cmd/Ctrl + S` | 保存文件 |
-
-详细使用说明请查看 [用户指南](./docs/user-guide.md)。
-
-### 🛠️ 技术栈
-
-- **Electron 44** - 跨平台桌面框架
-- **React 18** - 现代 UI 库
-- **TypeScript** - 类型安全开发
-- **Vite** - 下一代构建工具
-- **marked.js** - 快速 Markdown 解析器，支持 GFM
-- **DOMPurify** - XSS 防护和 HTML 净化
-- **@uiw/react-md-editor** - 所见即所得编辑器组件
-
-### 🗺️ 路线图
-
-#### 版本 1.x
-- [x] 单文件编辑与实时预览
-- [x] GFM 支持
-- [x] 跨平台构建
-- [ ] 自动保存功能
-- [ ] 深色主题
-- [ ] 导出为 PDF/HTML
-
-#### 版本 2.x
-- [ ] 查找和替换
-- [ ] 图片粘贴和上传
-- [ ] 自定义主题
-- [ ] 插件系统
-
-版本历史请查看 [CHANGELOG.md](./CHANGELOG.md)。
-
-### 📦 打包与签名
-
-后续需要让 AI 或维护者复用 macOS Developer ID 打包流程时，请查看 [AI 打包与签名操作手册](./PACKAGING_FOR_AI.md)。
-
-### 🤝 贡献
-
-欢迎贡献代码！详情请查看 [CONTRIBUTING.md](./CONTRIBUTING.md)。
-
-#### 贡献方式
-- 🐛 报告 bug
-- 💡 建议新功能
-- 🔧 提交 pull request
-- 📝 改进文档
-- ⭐ 给项目加星
-
-### 📄 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
-
-### 🙏 致谢
-
-- [@uiw/react-md-editor](https://github.com/uiwjs/react-md-editor) - 优秀的 Markdown 编辑器组件
-- [marked.js](https://marked.js.org/) - 快速轻量的 Markdown 解析器
-- [DOMPurify](https://github.com/cure53/DOMPurify) - XSS 净化器
-- [Electron](https://www.electronjs.org/) - 跨平台桌面应用
-- [React](https://react.dev/) - UI 框架
-
-### 📮 联系与支持
-
-- **问题反馈:** [GitHub Issues](https://github.com/zhangjianle0836-netizen/markdown-editor/issues)
-- **讨论交流:** [GitHub Discussions](https://github.com/zhangjianle0836-netizen/markdown-editor/discussions)
-
----
-
-<div align="center">
-
-**Made with ❤️ by MD Editor Contributors**
-
-[⬆ 返回顶部 | Back to top](#md-editor)
-
-</div>
+See [Releases](https://github.com/zhangjianle0836-netizen/markdown-editor/releases) for available binaries and their signing status. CI artifacts are verification builds. Contributions are welcome under [MIT](LICENSE); see [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).

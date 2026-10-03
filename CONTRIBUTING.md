@@ -1,169 +1,55 @@
-# Contributing to MD Editor
+# 贡献指南 / Contributing
 
-感谢你考虑为 MD Editor 做贡献！
+欢迎通过 [Issues](https://github.com/zhangjianle0836-netizen/markdown-editor/issues) 反馈缺陷、提出建议，或提交 Pull Request。参与交流请遵守 [行为准则](CODE_OF_CONDUCT.md)。安全漏洞请使用 [安全说明](SECURITY.md) 中的私密报告渠道。
 
-Thank you for considering contributing to MD Editor!
+## 准备开发环境
 
-## 🌍 贡献方式 | Ways to Contribute
-
-- 报告 Bug | Report bugs
-- 提出新功能建议 | Suggest new features
-- 提交代码改进 | Submit code improvements
-- 改进文档 | Improve documentation
-- 分享项目 | Share the project
-
-## 🐛 报告 Bug | Reporting Bugs
-
-如果你发现了 bug，请通过 GitHub Issues 提交：
-
-If you find a bug, please submit it via GitHub Issues:
-
-1. 使用清晰的标题描述问题 | Use a clear title to describe the issue
-2. 详细描述复现步骤 | Describe the steps to reproduce in detail
-3. 附上截图或日志 | Attach screenshots or logs
-4. 说明操作系统和版本 | Specify your OS and version
-
-## 💡 功能建议 | Feature Requests
-
-欢迎提出新功能建议！请：
-
-New feature suggestions are welcome! Please:
-
-1. 描述功能的使用场景 | Describe the use case
-2. 解释为什么这个功能有用 | Explain why it would be useful
-3. 提供可能的实现方案 | Provide possible implementation ideas
-
-## 🔧 开发设置 | Development Setup
-
-### 环境要求 | Prerequisites
-
-- Node.js 16+
-- npm or yarn
-- Git
-
-### 安装步骤 | Installation Steps
+需要 Node.js 22.12+、npm 和 Git。先 Fork 仓库，再克隆自己的 Fork：
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/md-editor.git
-cd md-editor
-
-# Install dependencies
-npm install
-
-# Start development server
+git clone https://github.com/<your-account>/markdown-editor.git
+cd markdown-editor
+npm ci
+git switch -c codex/your-change
 npm run electron:dev
 ```
 
-### 项目结构 | Project Structure
+模块职责和测试命令见 [开发指南](docs/developer-guide.md)。请不要把编辑器迁移到其他框架，或在一次改动中混入无关重构。
 
-```
-md-editor/
-├── electron/               # Electron main process
-│   ├── main.ts            # Main process entry
-│   └── preload.ts         # Preload script
-├── src/                   # React rendering process
-│   ├── components/        # React components
-│   ├── hooks/            # Custom hooks
-│   ├── types/            # TypeScript definitions
-│   └── utils/            # Utility functions
-├── build/                # Build resources
-└── public/               # Static assets
-```
+## 提交缺陷或建议
 
-### 代码规范 | Code Style
+缺陷报告请包含应用版本、操作系统与架构、复现步骤、期望行为和实际结果。开发模式的问题还应包含 Node.js 版本及失败命令。示例 Markdown 尽量缩减到可复现所需内容，日志和截图不要包含个人文档、凭据或私钥。
 
-- **TypeScript**: 使用严格模式 | Use strict mode
-- **命名规范 | Naming Conventions**:
-  - 文件: `PascalCase.tsx` (组件), `camelCase.ts` (工具)
-  - 组件: `PascalCase`
-  - 函数/变量: `camelCase`
-  - 常量: `UPPER_SNAKE_CASE`
-- **注释**: 复杂逻辑必须注释 | Complex logic must be commented
-- **提交信息**: 遵循约定式提交 | Follow Conventional Commits
+功能建议请描述使用场景、当前阻碍和期望结果；提出实现方式时说明兼容性与依赖影响。
 
-### Git 提交规范 | Git Commit Convention
+## 实现约定
 
-使用约定式提交格式：
+- 遵循现有 TypeScript 严格类型、React Hooks 和 2 空格缩进约定。
+- 文件操作集中由 `App` 协调，所有特权 IPC 在主进程校验来源和授权。
+- 阅读与分屏共用渲染管线，不绕过 DOMPurify 或未保存更改确认。
+- 保留键盘导航、可见焦点、控件名称和原生弹窗行为。
+- 修复缺陷或改变行为时，补充能验证用户结果的回归测试。
+- 新生产依赖需先在 Issue/PR 中说明必要性，优先使用现有能力。
+- 用户流程、命令、文件格式和架构变更需同步更新文档。
 
-Use Conventional Commits format:
+## 检查与提交
 
-```
-type(scope): subject
+开发中先运行受影响的测试；最终需要完整验证时运行一次 `npm run verify`，不要并发运行测试、构建或依赖安装。纯文档改动检查链接、命令和 Markdown 格式即可。Linux 的集成验证需要 Xvfb。
 
-body
+提交信息使用约定式提交，例如：
 
-footer
+```text
+fix: preserve edits made during file opening
+feat: add a new reading option
+docs: explain draft recovery
 ```
 
-**类型 | Types:**
-- `feat`: 新功能 | New feature
-- `fix`: Bug 修复 | Bug fix
-- `docs`: 文档更新 | Documentation update
-- `style`: 代码格式 | Code formatting
-- `refactor`: 代码重构 | Code refactoring
-- `perf`: 性能优化 | Performance improvement
-- `test`: 测试 | Test
-- `chore`: 构建/工具 | Build/tooling
+向本仓库的 `main` 分支提出 Pull Request，说明改动解决的问题、最终行为、实际执行的验证以及限制。涉及界面时附不含私人内容的截图。不要提交 `dist/`、`release/`、`work/`、`node_modules/`、`.env` 或签名凭据。
 
-**示例 | Example:**
-```
-feat(editor): add syntax highlighting for code blocks
+贡献代码继续采用本仓库已有的 [MIT 许可证](LICENSE)，不改变依赖原有的许可证。
 
-- Add highlight.js integration
-- Support multiple languages
-- Add line numbers option
+## English
 
-Closes #123
-```
+Use Issues for bugs and feature requests, and private vulnerability reports for security issues. Fork the repository, use Node.js 22.12+, install with `npm ci`, and submit a focused PR to `main`. Follow existing TypeScript/React conventions and preserve file authorization, unsaved-change protection and shared sanitized rendering.
 
-## 🎨 开发流程 | Development Workflow
-
-1. **Fork 项目** | Fork the repository
-2. **创建分支** | Create a branch
-   ```bash
-   git checkout -b feat/your-feature-name
-   ```
-3. **编写代码** | Write code
-4. **测试** | Test your changes
-   ```bash
-   npm run dev
-   npm run build
-   ```
-5. **提交更改** | Commit changes
-   ```bash
-   git add .
-   git commit -m "feat: your feature description"
-   ```
-6. **推送到 GitHub** | Push to GitHub
-   ```bash
-   git push origin feat/your-feature-name
-   ```
-7. **创建 Pull Request** | Create a Pull Request
-
-## ✅ Pull Request 指南 | Pull Request Guidelines
-
-- **标题清晰** | Clear title
-- **描述更改内容** | Describe what was changed
-- **关联 Issue** | Link related issues
-- **添加截图** | Add screenshots (if applicable)
-- **测试通过** | Ensure tests pass
-- **代码审查** | Respond to code review
-
-## 📝 许可证 | License
-
-通过提交代码，你同意你的贡献将根据 MIT 许可证授权。
-
-By submitting code, you agree that your contributions will be licensed under the MIT License.
-
-## 🙏 谢谢！
-
-感谢所有贡献者的付出！
-
-Thanks to all contributors for their efforts!
-
----
-
-如有问题，请随时联系维护者或提交 Issue。
-
-If you have questions, feel free to contact the maintainers or submit an Issue.
+Add meaningful regression tests when behavior changes. Run relevant checks sequentially; use `npm run verify` when full verification is needed. For documentation-only changes, validate links and commands. Use conventional commits, describe tests actually run, and exclude build outputs and credentials. Contributions remain under the existing MIT license.

@@ -61,8 +61,8 @@ This is the first public release ready for open source."
 ### 4. 连接远程仓库
 
 ```bash
-# 添加远程仓库（替换 yourusername）
-git remote add origin https://github.com/yourusername/md-editor.git
+# 添加远程仓库
+git remote add origin https://github.com/zhangjianle0836-netizen/markdown-editor.git
 
 # 设置主分支
 git branch -M main

@@ -10,7 +10,7 @@
 安装依赖：
 
 ```bash
-npm install
+npm ci
 ```
 
 启动 Electron 开发模式：
@@ -31,6 +31,7 @@ npm run dev
 npm run typecheck
 npm test
 npm run build
+npm run verify
 npm run electron:build
 ```
 
@@ -63,7 +64,7 @@ npm run electron:build
 - `preview`：渲染 `MarkdownPreview`
 - `edit` / `live`：按需 lazy load `@uiw/react-md-editor`
 
-`MarkdownPreview` 是阅读体验的主要模块，包含目录、搜索、锚点、阅读进度和轻量代码高亮。新增耗时逻辑时应考虑 debounce、`requestAnimationFrame` 或拆到 Worker。
+`MarkdownPreview` 包含目录、搜索、锚点与阅读进度。阅读和分屏通过 `useRenderedMarkdown` 共享解析、清洗和 `markdownEnhancements` 增强，代码高亮只处理原始代码文本。新增耗时逻辑时应考虑 debounce、`requestAnimationFrame` 或拆到 Worker。
 
 ### Markdown 渲染
 
@@ -79,6 +80,9 @@ npm run electron:build
 - 替换当前文件前必须处理未保存更改：保存、丢弃或取消。
 - 关闭窗口和退出应用同样必须经过未保存更改确认。
 - 空文件是合法文件，读取成功时内容可以是空字符串。
+- 操作序号和 revision 校验保护打开与关闭流程，异步完成后必须再次确认当前文档。
+- `electron/files.ts` 检测磁盘版本、保存权限和符号链接；PDF 导出不跟随目标链接覆盖源文件。
+- 草稿串行写入 `userData/recovery-draft.json`，恢复后不复用历史路径写权限。
 
 ## 样式约定
 
@@ -95,6 +99,22 @@ npm run electron:build
 
 文档入口在 `docs/README.md`，新增正式文档时需要在该索引中登记。
 
-## Electron 回归验证
+## 回归验证与资源限制
 
-先执行 `npm run build`，再依次执行 `npm test` 和 `npm run test:integration`。集成验证使用临时用户目录和测试对话框，检查页内目录跳转后的连续打开、未保存更改保护、PDF 导出与失败恢复；验证 PDF 和截图保存在忽略的 `work/pdf-verification/`。各检查应顺序执行。
+`npm run verify` 在同一任务锁下顺序执行单元测试、前端和主进程类型检查、生产构建、启动静态依赖图检查以及两个 Electron 集成测试。集成测试使用临时用户数据目录和原生对话框桩，不使用正在运行的用户应用。PDF 和截图输出到忽略的 `work/pdf-verification/`。
+
+开发中先运行受影响的单元测试；`npm test` 会编译主进程。单独运行 `npm run test:integration` 前需要已有最新 `npm run build` 结果。不要并行运行验证、构建、安装或打包，不要重复启动同仓库的全量检查。`scripts/run-task.cjs` 共用进程锁并将工作线程限制为 2。
+
+Linux 图形测试需要可用的桌面会话，无显示环境使用 Xvfb：
+
+```bash
+xvfb-run -a npm run verify
+```
+
+CI 在 Ubuntu 上提供 Xvfb；Electron 集成测试在 Linux 使用软件合成并在截图前显示测试窗口，以避免隐藏窗口没有捕获表面。测试窗口只在临时测试进程内创建。其他系统可以直接运行 `npm run verify`。
+
+## 打包和提交
+
+平台命令见 [安装与构建](deployment/installation.md)，macOS 签名和公证见 [打包手册](../PACKAGING_FOR_AI.md)。主进程仅依赖 Electron/Node 内置能力，前端包已构建到 `dist/`；新增运行时依赖时需要重新审视依赖分类和安装包内容。
+
+贡献流程见 [CONTRIBUTING.md](../CONTRIBUTING.md)，安全问题见 [SECURITY.md](../SECURITY.md)。文档改动检查链接和命令；应用行为改动需要对应回归测试。不要将生成目录或凭据加入 Git。
