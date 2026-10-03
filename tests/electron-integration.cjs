@@ -10,6 +10,8 @@ const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'md-editor-test-'));
 const output = path.resolve('work/pdf-verification');
 fs.mkdirSync(output, { recursive: true });
 app.setPath('userData', profile);
+// Xvfb runners have no hardware compositor for hidden-window capture.
+if (process.platform === 'linux') app.disableHardwareAcceleration();
 BrowserWindow.prototype.show = function () {};
 let saveResult = { canceled: true };
 let openResult = { canceled: true, filePaths: [] };
@@ -277,6 +279,7 @@ app.whenReady().then(async () => {
   console.log('PASS pending close preserves changes during draft cleanup');
 
   win.setSize(800, 650);
+  if (process.platform === 'linux') win.showInactive();
   await delay(150);
   const bounds = await evaluate(`Array.from(document.querySelectorAll('.toolbar-button')).map(button => { const r = button.getBoundingClientRect(); return {left:r.left,right:r.right}; })`);
   assert.ok(bounds.every(rect => rect.left >= 0 && rect.right <= 800));
